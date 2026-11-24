@@ -1,0 +1,15 @@
+services:
+  plex-playlist-manager:
+    build: .
+    image: plex-playlist-manager-web
+    container_name: plex-playlist-manager
+    restart: unless-stopped
+    ports:
+      - "8085:8080"
+    environment:
+      # Address of your Plex Media Server as seen from this container.
+      PLEX_URL: ${PLEX_URL:-http://192.168.0.158:32400}
+      # Protects the app itself. Strongly recommended, since it holds Plex tokens.
+      APP_PASSWORD: ${APP_PASSWORD:?Set APP_PASSWORD in a .env file next to compose.yml}
+    volumes:
+      - ./data:/data
