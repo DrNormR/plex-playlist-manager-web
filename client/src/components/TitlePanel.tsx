@@ -42,8 +42,8 @@ export function TitlePanel({ item, onItemChanged, onAddedToPlaylist }: {
 
   const shown = details ?? item;
   const square = ['track', 'album', 'artist'].includes(item.type);
-  const canCollect = COLLECTABLE.includes(item.type) && acct?.kind !== 'home';
-  const canEditMeta = acct?.kind !== 'home';
+  const canCollect = COLLECTABLE.includes(item.type) && !!acct?.admin;
+  const canEditMeta = !!acct?.admin;
   const [editTab, setEditTab] = useState<EditTab | null>(null);
 
   return (

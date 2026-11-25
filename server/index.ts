@@ -5,7 +5,7 @@ import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { getConfig, saveConfig, publicAccount, upsertAccount, type Account } from './config.js';
 import {
-  PlexError, Pms, plexTv, serverIdentity, serverTokenFor,
+  PlexError, Pms, plexTv, serverIdentity, serverAccessFor,
   normItem, normPlaylist, normCollection, playlistTypeFor, TYPE_NUM,
 } from './plex.js';
 import { planMoves } from './reorder.js';
@@ -88,7 +88,21 @@ app.put('/api/settings', async (req, res) => {
 
 // ---------------------------------------------------------------- accounts
 
-app.get('/api/accounts', (_req, res) => {
+app.get('/api/accounts', async (_req, res) => {
+  // Accounts saved before ownership was tracked: ask plex.tv once and remember.
+  let changed = false;
+  for (const a of cfg.accounts) {
+    if (a.serverOwner !== undefined || !a.plexTvToken) continue;
+    try {
+      const { token, owned } = await serverAccessFor(a.plexTvToken);
+      a.serverToken = token;
+      a.serverOwner = owned;
+      changed = true;
+    } catch {
+      /* leave unknown; try again next time */
+    }
+  }
+  if (changed) saveConfig();
   res.json(cfg.accounts.map(publicAccount));
 });
 
@@ -112,13 +126,14 @@ app.get('/api/auth/pin/:id', async (req, res) => {
 
 async function addOwnerAccount(plexTvToken: string, kind: Account['kind'] = 'owner') {
   const user = await plexTv.user(plexTvToken);
-  const serverToken = await serverTokenFor(plexTvToken);
+  const { token: serverToken, owned } = await serverAccessFor(plexTvToken);
   return upsertAccount({
     name: user.title || user.username || 'Plex account',
     kind,
     thumb: user.thumb,
     plexTvToken,
     serverToken,
+    serverOwner: owned,
     uuid: user.uuid,
   });
 }
@@ -191,13 +206,14 @@ app.post('/api/accounts/:id/home-users/:uuid', async (req, res) => {
     }
     throw e;
   }
-  const serverToken = await serverTokenFor(userToken);
+  const { token: serverToken, owned } = await serverAccessFor(userToken);
   const acct = upsertAccount({
     name: u.title,
     kind: 'home',
     thumb: u.thumb,
     plexTvToken: userToken,
     serverToken,
+    serverOwner: owned,
     uuid: u.uuid,
     parentId: owner.id,
   });

@@ -17,6 +17,8 @@ export interface Account {
   uuid?: string;
   /** For Home users: the account id of the owner they were added from. */
   parentId?: string;
+  /** True when this account owns the Plex server (can edit metadata and collections). */
+  serverOwner?: boolean;
 }
 
 export interface Config {
@@ -58,7 +60,9 @@ export function saveConfig() {
 }
 
 export function publicAccount(a: Account) {
-  return { id: a.id, name: a.name, kind: a.kind, thumb: a.thumb, parentId: a.parentId };
+  // Unknown ownership (token-only accounts): let the UI offer admin tools and let Plex decide.
+  const admin = a.serverOwner ?? a.kind !== 'home';
+  return { id: a.id, name: a.name, kind: a.kind, thumb: a.thumb, parentId: a.parentId, admin };
 }
 
 export function upsertAccount(a: Omit<Account, 'id'> & { id?: string }): Account {

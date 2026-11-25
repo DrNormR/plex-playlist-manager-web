@@ -50,7 +50,7 @@ export function EditDialog({ acctId, ratingKey, title, type, initialTab = 'gener
   onSaved?: (item: FullItem) => void;
 }) {
   const { acct, notify, busy } = useApp();
-  const canEdit = acct?.kind !== 'home';
+  const canEdit = !!acct?.admin;
   const [tab, setTab] = useState<EditTab>(canEdit ? initialTab : 'info');
   const [full, setFull] = useState<FullItem | null>(null);
   const [error, setError] = useState('');

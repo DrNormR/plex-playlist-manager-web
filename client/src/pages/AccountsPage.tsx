@@ -109,7 +109,7 @@ export function AccountsPage({ onSelect }: { onSelect: (id: string) => void }) {
       <section className="card">
         <h2>Accounts</h2>
         <p className="muted small">
-          Each account has its own playlists. Sign in with your admin account first, then add your family's Plex Home profiles from it.
+          Each account has its own playlists. Sign in with Plex, then add the other Plex Home profiles from that account. The account that owns the server is marked <strong>server admin</strong>; only it can edit metadata, artwork and collections.
         </p>
         <div className="acct-list">
           {accounts.map((a) => (
@@ -117,7 +117,8 @@ export function AccountsPage({ onSelect }: { onSelect: (id: string) => void }) {
               {a.thumb ? <img className="avatar" src={a.thumb} alt="" referrerPolicy="no-referrer" /> : <div className="avatar" />}
               <div className="grow">
                 <div>
-                  <strong>{a.name}</strong> {acct?.id === a.id && <span className="tag">current</span>}
+                  <strong>{a.name}</strong> {a.admin && <span className="tag admin-tag" title="Owns the Plex server: can edit metadata, artwork and collections">server admin</span>}{' '}
+                  {acct?.id === a.id && <span className="tag">current</span>}
                 </div>
                 <div className="muted small">
                   {KIND_LABEL[a.kind]}

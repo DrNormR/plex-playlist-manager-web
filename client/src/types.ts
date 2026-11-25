@@ -4,6 +4,8 @@ export interface Account {
   kind: 'owner' | 'home' | 'token';
   thumb?: string;
   parentId?: string;
+  /** Owns the Plex server: can edit metadata, artwork and collections. */
+  admin: boolean;
 }
 
 export interface Item {

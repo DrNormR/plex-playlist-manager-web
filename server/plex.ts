@@ -178,15 +178,18 @@ export async function serverIdentity(serverUrl: string): Promise<{ id: string; n
   return v;
 }
 
-/** Find the token a plex.tv account should use against the configured server. */
-export async function serverTokenFor(plexTvToken: string): Promise<string> {
+/**
+ * Find the token a plex.tv account should use against the configured server,
+ * and whether that account owns (administers) the server.
+ */
+export async function serverAccessFor(plexTvToken: string): Promise<{ token: string; owned: boolean }> {
   const { serverUrl } = getConfig();
   if (!serverUrl) throw new PlexError(400, 'Set the Plex server URL first (Accounts page).');
   const { id } = await serverIdentity(serverUrl);
   const resources = await plexTv.resources(plexTvToken);
   const r = resources.find((x) => x.clientIdentifier === id);
   if (!r) throw new PlexError(403, `This Plex account has no access to the server at ${serverUrl}.`);
-  return r.accessToken || plexTvToken;
+  return { token: r.accessToken || plexTvToken, owned: !!r.owned };
 }
 
 export class Pms {

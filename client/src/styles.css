@@ -292,3 +292,4 @@ textarea { font: inherit; color: inherit; background: var(--panel-2); border: 1p
 .facts dt { color: var(--muted); }
 .facts dd { margin: 0; word-break: break-all; }
 @media (max-width: 700px) { .edit-grid { grid-template-columns: 1fr; } }
+.admin-tag { color: var(--accent); border-color: var(--sel-line); }
