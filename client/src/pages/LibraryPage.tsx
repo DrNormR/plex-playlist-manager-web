@@ -359,7 +359,7 @@ export function LibraryPage() {
             item={focus}
             onAddedToPlaylist={(a, p) => a === acctId && rememberQuick({ ratingKey: p.ratingKey, title: p.title })}
             onItemChanged={(fresh) => {
-              const patch = (l: Item[]) => l.map((x) => (x.ratingKey === fresh.ratingKey ? { ...x, thumb: fresh.thumb, art: fresh.art } : x));
+              const patch = (l: Item[]) => l.map((x) => (x.ratingKey === fresh.ratingKey ? { ...x, title: fresh.title, displayTitle: fresh.displayTitle, year: fresh.year, thumb: fresh.thumb, art: fresh.art } : x));
               setItems(patch);
               setChildren((c) => (c ? patch(c) : c));
               setTrail(patch);

@@ -1,4 +1,4 @@
-import type { Account, ArtKind, ArtOption, Collection, HomeUser, IndexedPlaylist, Item, ItemDetails, Library, LibraryPageResult, Playlist, SearchHub } from './types';
+import type { Account, ArtKind, ArtOption, FullItem, MatchResult, Collection, HomeUser, IndexedPlaylist, Item, ItemDetails, Library, LibraryPageResult, Playlist, SearchHub } from './types';
 
 export class ApiError extends Error {
   constructor(
@@ -85,6 +85,17 @@ export const api = {
   },
   genres: (acct: string, sec: string) => call<{ key: string; title: string }[]>('GET', `${a(acct)}/libraries/${sec}/genres`),
   letters: (acct: string, sec: string) => call<{ key: string; title: string; size: number }[]>('GET', `${a(acct)}/libraries/${sec}/letters`),
+
+  fullItem: (acct: string, rk: string) => call<FullItem>('GET', `${a(acct)}/items/${rk}/full`),
+  editItem: (acct: string, rk: string, body: { fields?: Record<string, string>; locked?: Record<string, boolean>; tags?: Record<string, string[]> }) =>
+    call<{ changed: number; item: FullItem }>('PUT', `${a(acct)}/items/${rk}/edit`, body),
+  tagValues: (acct: string, sec: string, field: string, type?: string) =>
+    call<string[]>('GET', `${a(acct)}/libraries/${sec}/tags/${field}${type ? `?type=${type}` : ''}`),
+  matches: (acct: string, rk: string, title: string, year: string) =>
+    call<MatchResult[]>('GET', `${a(acct)}/items/${rk}/matches?title=${encodeURIComponent(title)}&year=${encodeURIComponent(year)}`),
+  applyMatch: (acct: string, rk: string, m: MatchResult) => call('POST', `${a(acct)}/items/${rk}/match`, { guid: m.guid, name: m.name, year: m.year }),
+  unmatch: (acct: string, rk: string) => call('POST', `${a(acct)}/items/${rk}/unmatch`),
+  refreshItem: (acct: string, rk: string) => call('POST', `${a(acct)}/items/${rk}/refresh`),
 
   artOptions: (acct: string, rk: string, kind: ArtKind) => call<ArtOption[]>('GET', `${a(acct)}/art/${rk}/${kind}`),
   selectArt: (acct: string, rk: string, kind: ArtKind, url: string) => call('POST', `${a(acct)}/art/${rk}/${kind}/select`, { url }),

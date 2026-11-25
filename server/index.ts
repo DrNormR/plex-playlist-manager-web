@@ -9,6 +9,7 @@ import {
   normItem, normPlaylist, normCollection, playlistTypeFor, TYPE_NUM,
 } from './plex.js';
 import { planMoves } from './reorder.js';
+import { registerMetadataRoutes } from './metadata.js';
 
 const PORT = Number(process.env.PORT || 8080);
 const APP_PASSWORD = process.env.APP_PASSWORD || '';
@@ -505,6 +506,8 @@ acctRouter.get('/items/:rk/children', async (req, res) => {
   const { items } = await pms(res).getAll(`/library/metadata/${req.params.rk}/children`);
   res.json(items.map(normItem));
 });
+
+registerMetadataRoutes(acctRouter, pms);
 
 // --- artwork (posters/thumbnails and background art) for titles, collections and playlists
 

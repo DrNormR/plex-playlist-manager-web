@@ -104,3 +104,60 @@ export interface ArtOption {
 }
 
 export type ArtKind = 'poster' | 'art';
+
+export interface MediaStream {
+  streamType: number;
+  codec?: string;
+  displayTitle?: string;
+  language?: string;
+  selected: boolean;
+}
+
+export interface MediaPart {
+  file?: string;
+  size?: number;
+  container?: string;
+  duration?: number;
+  exists?: boolean;
+  accessible?: boolean;
+  streams: MediaStream[];
+}
+
+export interface MediaInfo {
+  id: string;
+  videoResolution?: string;
+  width?: number;
+  height?: number;
+  videoCodec?: string;
+  videoFrameRate?: string;
+  audioCodec?: string;
+  audioChannels?: number;
+  container?: string;
+  bitrate?: number;
+  duration?: number;
+  editionTitle?: string;
+  parts: MediaPart[];
+}
+
+export interface FullItem extends Item {
+  librarySectionID: string;
+  fields: Record<string, string>;
+  tags: Record<string, string[]>;
+  locked: string[];
+  guid?: string;
+  guids: string[];
+  updatedAt?: number;
+  lastViewedAt?: number;
+  locations: string[];
+  media: MediaInfo[];
+}
+
+export interface MatchResult {
+  guid: string;
+  name: string;
+  year?: number;
+  score?: number;
+  thumb?: string;
+  summary?: string;
+  matched: boolean;
+}

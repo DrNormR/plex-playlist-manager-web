@@ -4,6 +4,7 @@ import { useApp } from '../ctx';
 import type { Collection, IndexedPlaylist, Item, ItemDetails } from '../types';
 import { Thumb } from './Thumb';
 import { ArtworkDialog } from './ArtworkDialog';
+import { EditDialog, type EditTab } from './EditDialog';
 import { entryMatcher, isGroupType, refreshIndexedPlaylist, updatePlaylistIndex, usePlaylistIndex } from './playlistIndex';
 import { TYPE_LABEL, cmpText, fmtDuration, plural } from '../util';
 
@@ -15,7 +16,7 @@ const COLLECTABLE = ['movie', 'show', 'artist', 'album'];
  */
 export function TitlePanel({ item, onItemChanged, onAddedToPlaylist }: {
   item: Item;
-  /** Called after artwork changes, with fresh details. */
+  /** Called after artwork or metadata changes, with fresh details. */
   onItemChanged?: (fresh: ItemDetails) => void;
   onAddedToPlaylist?: (acctId: string, playlist: { ratingKey: string; title: string }) => void;
 }) {
@@ -42,6 +43,8 @@ export function TitlePanel({ item, onItemChanged, onAddedToPlaylist }: {
   const shown = details ?? item;
   const square = ['track', 'album', 'artist'].includes(item.type);
   const canCollect = COLLECTABLE.includes(item.type) && acct?.kind !== 'home';
+  const canEditMeta = acct?.kind !== 'home';
+  const [editTab, setEditTab] = useState<EditTab | null>(null);
 
   return (
     <div className="membership">
@@ -58,7 +61,14 @@ export function TitlePanel({ item, onItemChanged, onAddedToPlaylist }: {
           </div>
           {details?.summary && <p className="summary small">{details.summary}</p>}
           {item.type !== 'collection' && (
-            <button className="small-btn" onClick={() => setArtOpen(true)}>Change artwork…</button>
+            <div className="panel-actions">
+              {canEditMeta && <button className="small-btn" onClick={() => setEditTab('general')}>Edit…</button>}
+              {canEditMeta && ['movie', 'show', 'artist', 'album'].includes(item.type) && (
+                <button className="small-btn" onClick={() => setEditTab('match')}>Match…</button>
+              )}
+              <button className="small-btn" onClick={() => setEditTab('info')}>Info</button>
+              <button className="small-btn" onClick={() => setArtOpen(true)}>Artwork…</button>
+            </div>
           )}
         </div>
       </div>
@@ -81,6 +91,21 @@ export function TitlePanel({ item, onItemChanged, onAddedToPlaylist }: {
             <CollectionChecks item={item} details={details} setDetails={setDetails} />
           )}
         </>
+      )}
+
+      {editTab && (
+        <EditDialog
+          acctId={acct!.id}
+          ratingKey={item.ratingKey}
+          title={shown.displayTitle}
+          type={item.type}
+          initialTab={editTab}
+          onClose={() => setEditTab(null)}
+          onSaved={async () => {
+            const d = await loadDetails();
+            if (d) onItemChanged?.(d);
+          }}
+        />
       )}
 
       {artOpen && (

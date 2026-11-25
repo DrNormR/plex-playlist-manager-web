@@ -9,7 +9,7 @@
     "build": "vite build && tsc -p server/tsconfig.json",
     "start": "node dist/server/index.js",
     "typecheck": "tsc -p server/tsconfig.json --noEmit && tsc -p tsconfig.json --noEmit",
-    "test": "tsx --test server/*.test.ts"
+    "test": "tsx --test server/reorder.test.ts server/metadata.test.ts"
   },
   "license": "MIT",
   "dependencies": {

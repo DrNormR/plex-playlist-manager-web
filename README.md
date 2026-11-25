@@ -19,6 +19,13 @@ fighting the Plex UI. It replaces the old WinForms
 - Click a title to see its details, and tick or untick playlists (any account) and collections (admin) in the side panel.
 - Tick several titles to add them anywhere at once, or pick a **Quick add** playlist and use the **+** button on each title.
 
+**Edit, match & info** (Edit…, Match… and Info buttons in the title panel)
+- **General:** title, sort title, original title, edition, release date, year, content rating, studio, tagline, and summary. The fields shown depend on the type (movie, show, season, episode, artist, album, track).
+- **Tags:** genres, labels, collections, directors, writers, producers, countries, styles, and moods, as chips with suggestions from the library. Typing a new collection name creates that collection.
+- Every field has a 🔒 lock like in Plex. Editing a field locks it, so a metadata refresh won't overwrite your change.
+- **Match:** search for a match and apply it (Fix Match), unmatch, or refresh metadata.
+- **Info:** file paths (with a Copy button), resolution, codecs, bitrate, size, streams, external IDs, and dates. Any account can see Info; editing and matching need the server admin account.
+
 **Artwork**
 - Change a poster/thumbnail or background art for titles, playlists, and collections.
 - Upload a file (choose or drag-and-drop JPEG, PNG or WebP, up to 20 MB), paste an image URL, or pick one of the alternatives Plex already has.
