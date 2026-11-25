@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { api, errMsg, thumbUrl } from '../api';
 import { useApp } from '../ctx';
-import type { ArtKind, ArtOption } from '../types';
+import type { ArtKind, ArtOption, WebImage } from '../types';
 import { Modal } from './Modal';
 
 const MAX_BYTES = 20 * 1024 * 1024;
@@ -76,9 +76,10 @@ export function ArtworkDialog({ acctId, ratingKey, title, itemType, onClose, onC
     const ok = await busy('Uploading to Plex…', async () => (await api.uploadArt(acctId, ratingKey, kind, file), true));
     if (ok) await done(`${kind === 'poster' ? posterLabel : 'Background'} uploaded`);
   };
-  const fromUrl = async () => {
-    const ok = await busy('Sending to Plex…', async () => (await api.artFromUrl(acctId, ratingKey, kind, url.trim()), true));
+  const fromUrl = async (u = url.trim()) => {
+    const ok = await busy('Sending to Plex…', async () => (await api.artFromUrl(acctId, ratingKey, kind, u), true));
     if (ok) await done(`${kind === 'poster' ? posterLabel : 'Background'} set from URL`);
+    return !!ok;
   };
   const select = async (o: ArtOption) => {
     if (o.selected) return;
@@ -124,6 +125,13 @@ export function ArtworkDialog({ acctId, ratingKey, title, itemType, onClose, onC
         <button className="primary" disabled={!/^https?:\/\/\S+$/i.test(url.trim())}>Use URL</button>
       </form>
 
+      <WebImageSearch
+        title={title}
+        wide={wide}
+        useLabel={`Use as ${kind === 'poster' ? posterLabel.toLowerCase() : 'background'}`}
+        onUse={(u) => fromUrl(u)}
+      />
+
       <h3>{options?.length ? 'Or pick one Plex already has' : 'Available artwork'}</h3>
       {error && <div className="banner error">{/40[13]/.test(error) ? `This account can't change this artwork. Use the server admin account. (${error})` : error}</div>}
       {!options && !error && <div className="muted">Loading…</div>}
@@ -138,5 +146,131 @@ export function ArtworkDialog({ acctId, ratingKey, title, itemType, onClose, onC
         ))}
       </div>
     </Modal>
+  );
+}
+
+// Whether a SerpApi key is set, checked once per page load.
+let searchConfigured: Promise<boolean> | null = null;
+
+/** Google Images search (via SerpApi) inside the artwork dialog. */
+function WebImageSearch({ title, wide, useLabel, onUse }: {
+  title: string;
+  wide: boolean;
+  useLabel: string;
+  onUse: (url: string) => Promise<boolean>;
+}) {
+  const [q, setQ] = useState(title);
+  const [configured, setConfigured] = useState<boolean | null>(null);
+  const [results, setResults] = useState<WebImage[] | null>(null);
+  const [page, setPage] = useState(0);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [picked, setPicked] = useState<WebImage | null>(null);
+  const [previewFailed, setPreviewFailed] = useState(false);
+
+  useEffect(() => {
+    searchConfigured ??= api.imageSearchStatus().then((s) => s.configured, () => false);
+    searchConfigured.then(setConfigured);
+  }, []);
+
+  const run = async (nextPage = 0) => {
+    if (!q.trim()) return;
+    setLoading(true);
+    setError('');
+    try {
+      const r = await api.imageSearch(q.trim(), nextPage);
+      setResults((cur) => (nextPage === 0 ? r.results : [...(cur ?? []), ...r.results.filter((x) => !cur?.some((c) => c.original === x.original))]));
+      setPage(nextPage);
+      if (nextPage === 0) setPicked(null);
+    } catch (e) {
+      setError(errMsg(e));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Show images with the right shape first (tall for posters, wide for backgrounds), keeping Google's order otherwise.
+  const fits = (i: WebImage) => {
+    if (!i.width || !i.height) return 1;
+    const r = i.width / i.height;
+    return wide ? (r >= 1.3 ? 0 : 2) : r <= 0.85 ? 0 : 2;
+  };
+  const sorted = results ? [...results].sort((a, b) => fits(a) - fits(b)) : null;
+  const googleUrl = `https://www.google.com/search?tbm=isch&q=${encodeURIComponent(q.trim() || title)}`;
+
+  return (
+    <section className="web-search">
+      <h3>Search the web</h3>
+      <form className="inline-form" onSubmit={(e) => (e.preventDefault(), run(0))}>
+        <input className="grow" value={q} onChange={(e) => setQ(e.target.value)} placeholder="What to search for" />
+        <button className="primary" disabled={!configured || loading || !q.trim()}>{loading && page === 0 ? 'Searching…' : 'Search images'}</button>
+        <a className="small nowrap" href={googleUrl} target="_blank" rel="noreferrer">Open in Google Images ↗</a>
+      </form>
+      {configured === false && (
+        <div className="muted small">
+          To search right here, add a SerpApi key on the Accounts page. Meanwhile, “Open in Google Images” works: right-click an image there, copy its address, and paste it in the URL box above.
+        </div>
+      )}
+      {error && <div className="banner error">{error}</div>}
+      {sorted && !sorted.length && !error && <div className="muted small">No images found. Try fewer words, e.g. just the teams and the date.</div>}
+
+      {picked && (
+        <div className="web-picked">
+          <img
+            src={previewFailed ? picked.thumbnail : picked.original}
+            alt=""
+            referrerPolicy="no-referrer"
+            onError={() => setPreviewFailed(true)}
+          />
+          <div className="grow">
+            <div className="small"><strong>{picked.title ?? 'Image'}</strong></div>
+            <div className="muted small">
+              {picked.width && picked.height ? `${picked.width}×${picked.height}` : 'Size unknown'}
+              {picked.source ? ` · ${picked.source}` : ''}
+              {picked.link && (
+                <>
+                  {' · '}
+                  <a href={picked.link} target="_blank" rel="noreferrer">page ↗</a>
+                </>
+              )}
+            </div>
+            {previewFailed && <div className="muted small">That site blocks previews, but Plex can usually still download it.</div>}
+            <div className="inline-form">
+              <button
+                className="primary"
+                onClick={async () => {
+                  if (await onUse(picked.original)) setPicked(null);
+                }}
+              >
+                {useLabel}
+              </button>
+              <button onClick={() => setPicked(null)}>Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {sorted && sorted.length > 0 && (
+        <>
+          <div className={`web-grid ${wide ? 'wide' : ''}`}>
+            {sorted.map((i) => (
+              <button
+                key={i.original}
+                className={`web-thumb ${picked?.original === i.original ? 'on' : ''} ${fits(i) === 2 ? 'off-shape' : ''}`}
+                onClick={() => (setPicked(i), setPreviewFailed(false))}
+                title={`${i.title ?? ''}${i.source ? ` · ${i.source}` : ''}`}
+              >
+                <img src={i.thumbnail} alt="" loading="lazy" referrerPolicy="no-referrer" />
+                {i.width && i.height && <span className="dims">{i.width}×{i.height}</span>}
+              </button>
+            ))}
+          </div>
+          <div className="inline-form">
+            <button onClick={() => run(page + 1)} disabled={loading}>{loading ? 'Loading…' : 'More results'}</button>
+            <span className="muted small">Click an image to preview it. Shapes that don't fit are dimmed.</span>
+          </div>
+        </>
+      )}
+    </section>
   );
 }

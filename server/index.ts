@@ -10,6 +10,7 @@ import {
 } from './plex.js';
 import { planMoves } from './reorder.js';
 import { registerMetadataRoutes } from './metadata.js';
+import { registerImageSearchRoutes } from './imageSearch.js';
 
 const PORT = Number(process.env.PORT || 8080);
 const APP_PASSWORD = process.env.APP_PASSWORD || '';
@@ -85,6 +86,8 @@ app.put('/api/settings', async (req, res) => {
   saveConfig();
   res.json({ serverUrl: url, reachable: true });
 });
+
+registerImageSearchRoutes(app);
 
 // ---------------------------------------------------------------- accounts
 

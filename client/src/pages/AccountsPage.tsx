@@ -143,6 +143,8 @@ export function AccountsPage({ onSelect }: { onSelect: (id: string) => void }) {
         </div>
       </section>
 
+      <ImageSearchCard />
+
       {showToken && <TokenDialog onClose={() => setShowToken(false)} onAdded={async (a) => (await reloadAccounts(), !acct && onSelect(a.id))} />}
       {homeFor && <HomeUsersDialog owner={homeFor} onClose={() => setHomeFor(null)} />}
     </div>
@@ -250,5 +252,76 @@ function HomeUsersDialog({ owner, onClose }: { owner: Account; onClose: () => vo
       </div>
       <p className="muted small">Their PIN is used once to get a token and is not saved.</p>
     </Modal>
+  );
+}
+
+function ImageSearchCard() {
+  const { busy, notify } = useApp();
+  const [status, setStatus] = useState<Awaited<ReturnType<typeof api.imageSearchStatus>> | null>(null);
+  const [key, setKey] = useState('');
+
+  const load = () => api.imageSearchStatus().then(setStatus, (e) => notify(errMsg(e), 'error'));
+  useEffect(() => {
+    load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const save = async () => {
+    const r = await busy('Checking key with SerpApi…', () => api.saveImageSearchKey(key.trim()));
+    if (r) {
+      setKey('');
+      notify('Image search is ready', 'ok');
+      load();
+    }
+  };
+  const remove = async () => {
+    if (!confirm('Remove the SerpApi key from this app?')) return;
+    if (await busy('Removing…', () => api.removeImageSearchKey())) load();
+  };
+
+  return (
+    <section className="card">
+      <h2>Image search</h2>
+      <p className="muted small">
+        Lets the Artwork window search Google Images for you (through{' '}
+        <a href="https://serpapi.com/" target="_blank" rel="noreferrer">SerpApi</a>). The free SerpApi plan includes 250 searches a month, and
+        this app remembers each search for a day so repeats are free. The key is stored only on the server running this app.
+      </p>
+      {status?.configured ? (
+        <>
+          <div className={`small ${status.error ? 'error-text' : 'ok-text'}`}>
+            {status.error ? `● ${status.error}` : '● Connected'}
+            {status.plan && <span className="muted"> · {status.plan} plan</span>}
+            {status.searchesLeft !== undefined && (
+              <span className="muted"> · {status.searchesLeft.toLocaleString()} searches left{status.perMonth ? ` of ${status.perMonth.toLocaleString()} this month` : ''}</span>
+            )}
+            {status.lockedByEnv && <span className="muted"> · set by the SERPAPI_KEY environment variable</span>}
+          </div>
+          {!status.lockedByEnv && (
+            <div className="inline-form">
+              <button className="danger" onClick={remove}>Remove key</button>
+            </div>
+          )}
+        </>
+      ) : (
+        <form
+          className="inline-form"
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (key.trim()) save();
+          }}
+        >
+          <input
+            className="grow"
+            type="password"
+            autoComplete="off"
+            placeholder="Paste your SerpApi API key"
+            value={key}
+            onChange={(e) => setKey(e.target.value)}
+          />
+          <button className="primary" disabled={!key.trim()}>Save &amp; test</button>
+        </form>
+      )}
+    </section>
   );
 }

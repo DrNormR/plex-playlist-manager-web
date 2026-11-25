@@ -29,6 +29,8 @@ fighting the Plex UI. It replaces the old WinForms
 **Artwork**
 - Change a poster/thumbnail or background art for titles, playlists, and collections.
 - Upload a file (choose or drag-and-drop JPEG, PNG or WebP, up to 20 MB), paste an image URL, or pick one of the alternatives Plex already has.
+- **Search the web** right in the artwork window. The search box starts with the title; click an image to preview it, then **Use as poster/background**. Poster-shaped (or wide, for backgrounds) images are listed first.
+  This uses Google Images through [SerpApi](https://serpapi.com/): paste your API key on the Accounts page (the free plan has 250 searches a month, and repeat searches within a day are cached). Without a key, **Open in Google Images** opens the search in a new tab.
 - Changing a title's or collection's artwork needs the server admin account.
 
 **Playlists**
@@ -78,7 +80,7 @@ npm run typecheck
 npm run build && npm start   # production build on :8080
 ```
 
-Environment variables: `PLEX_URL`, `APP_PASSWORD`, `PORT` (default 8080), and `DATA_DIR` (default `./data`).
+Environment variables: `PLEX_URL`, `APP_PASSWORD`, `PORT` (default 8080), `DATA_DIR` (default `./data`), and optionally `SERPAPI_KEY` (instead of entering it on the Accounts page).
 
 ## Notes
 

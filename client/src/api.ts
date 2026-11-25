@@ -1,4 +1,4 @@
-import type { Account, ArtKind, ArtOption, FullItem, MatchResult, Collection, HomeUser, IndexedPlaylist, Item, ItemDetails, Library, LibraryPageResult, Playlist, SearchHub } from './types';
+import type { Account, ArtKind, ArtOption, FullItem, MatchResult, WebImage, Collection, HomeUser, IndexedPlaylist, Item, ItemDetails, Library, LibraryPageResult, Playlist, SearchHub } from './types';
 
 export class ApiError extends Error {
   constructor(
@@ -97,6 +97,13 @@ export const api = {
     call<{ ok: boolean; ratingKey: string; merged: boolean; title?: string; year?: number }>('POST', `${a(acct)}/items/${rk}/match`, { guid: m.guid, name: m.name, year: m.year }),
   unmatch: (acct: string, rk: string) => call('POST', `${a(acct)}/items/${rk}/unmatch`),
   refreshItem: (acct: string, rk: string) => call('POST', `${a(acct)}/items/${rk}/refresh`),
+
+  imageSearchStatus: () =>
+    call<{ configured: boolean; lockedByEnv: boolean; plan?: string; searchesLeft?: number; perMonth?: number; error?: string }>('GET', '/api/image-search/status'),
+  saveImageSearchKey: (key: string) => call<{ configured: boolean; plan?: string; searchesLeft?: number }>('PUT', '/api/image-search/key', { key }),
+  removeImageSearchKey: () => call('DELETE', '/api/image-search/key'),
+  imageSearch: (q: string, page = 0) =>
+    call<{ results: WebImage[]; cached: boolean }>('GET', `/api/image-search?q=${encodeURIComponent(q)}&page=${page}`),
 
   artOptions: (acct: string, rk: string, kind: ArtKind) => call<ArtOption[]>('GET', `${a(acct)}/art/${rk}/${kind}`),
   selectArt: (acct: string, rk: string, kind: ArtKind, url: string) => call('POST', `${a(acct)}/art/${rk}/${kind}/select`, { url }),

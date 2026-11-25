@@ -163,3 +163,13 @@ export interface MatchResult {
   summary?: string;
   matched: boolean;
 }
+
+export interface WebImage {
+  thumbnail: string;
+  original: string;
+  width?: number;
+  height?: number;
+  title?: string;
+  source?: string;
+  link?: string;
+}

@@ -26,6 +26,8 @@ export interface Config {
   sessionSecret: string;
   serverUrl: string;
   accounts: Account[];
+  /** SerpApi key for web image search in the artwork dialog. */
+  serpApiKey?: string;
 }
 
 const DATA_DIR = process.env.DATA_DIR || path.resolve('data');
@@ -46,6 +48,7 @@ export function getConfig(): Config {
     sessionSecret: loaded.sessionSecret || crypto.randomBytes(32).toString('hex'),
     serverUrl: process.env.PLEX_URL || loaded.serverUrl || '',
     accounts: loaded.accounts || [],
+    serpApiKey: loaded.serpApiKey,
   };
   saveConfig();
   return cfg;
