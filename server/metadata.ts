@@ -185,15 +185,36 @@ export function registerMetadataRoutes(router: Router, pms: (res: Response) => P
   });
 
   router.post('/items/:rk/match', async (req, res) => {
+    const p = pms(res);
     const rk = rkParam(req.params.rk);
     const guid = String(req.body?.guid ?? '');
     if (!guid) throw new PlexError(400, 'Pick a match');
-    await pms(res).put(`/library/metadata/${rk}/match`, {
+    const { m: before, sectionId } = await rawMeta(p, rk);
+    await p.put(`/library/metadata/${rk}/match`, {
       guid,
       name: req.body?.name ? String(req.body.name) : undefined,
       year: req.body?.year ? String(req.body.year) : undefined,
     });
-    res.json({ ok: true });
+
+    // If another item in the library already had this match, Plex merges the two
+    // into that item and this ratingKey disappears. Find where it went.
+    try {
+      await p.get(`/library/metadata/${rk}`);
+      return void res.json({ ok: true, ratingKey: rk, merged: false });
+    } catch (e) {
+      if (!(e instanceof PlexError) || e.status !== 404) throw e;
+    }
+    const type = TYPE_NUM[before.type];
+    let found: any;
+    for (let attempt = 0; attempt < 5 && !found; attempt++) {
+      if (attempt) await new Promise((r) => setTimeout(r, 1000));
+      const j = await p.get(`/library/sections/${sectionId}/all`, { type, guid });
+      found = j?.MediaContainer?.Metadata?.[0];
+    }
+    if (!found) {
+      throw new PlexError(404, 'Plex applied the match but the item moved and could not be found. Reload the library to see it.');
+    }
+    res.json({ ok: true, ratingKey: String(found.ratingKey), merged: true, title: found.title, year: found.year });
   });
 
   router.post('/items/:rk/unmatch', async (req, res) => {

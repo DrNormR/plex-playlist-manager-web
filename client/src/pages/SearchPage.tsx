@@ -83,7 +83,7 @@ export function SearchPage() {
 
       <aside className="sidebar sidebar-right">
         {focus ? (
-          <TitlePanel key={focus.ratingKey} item={focus} />
+          <TitlePanel key={focus.ratingKey} item={focus} onReplaced={(_old, fresh) => setFocus(fresh)} />
         ) : (
           <div className="muted pad">Click a search result to see which playlists it's in.</div>
         )}

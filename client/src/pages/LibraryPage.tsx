@@ -358,6 +358,21 @@ export function LibraryPage() {
             key={focus.ratingKey}
             item={focus}
             onAddedToPlaylist={(a, p) => a === acctId && rememberQuick({ ratingKey: p.ratingKey, title: p.title })}
+            onReplaced={(old, fresh) => {
+              // Plex merged the item into another: drop the old row, show the merged one.
+              const swap = (l: Item[]) => {
+                const hasNew = l.some((x) => x.ratingKey === fresh.ratingKey);
+                return hasNew ? l.filter((x) => x.ratingKey !== old) : l.map((x) => (x.ratingKey === old ? fresh : x));
+              };
+              setItems(swap);
+              setChildren((c) => (c ? swap(c) : c));
+              setPicked((pk) => {
+                const n = new Map(pk);
+                n.delete(old);
+                return n;
+              });
+              setFocus(fresh);
+            }}
             onItemChanged={(fresh) => {
               const patch = (l: Item[]) => l.map((x) => (x.ratingKey === fresh.ratingKey ? { ...x, title: fresh.title, displayTitle: fresh.displayTitle, year: fresh.year, thumb: fresh.thumb, art: fresh.art } : x));
               setItems(patch);

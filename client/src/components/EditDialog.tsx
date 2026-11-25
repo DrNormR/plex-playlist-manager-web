@@ -39,7 +39,7 @@ const MATCHABLE = ['movie', 'show', 'artist', 'album'];
 
 const sameList = (a: string[], b: string[]) => a.length === b.length && a.every((x, i) => x === b[i]);
 
-export function EditDialog({ acctId, ratingKey, title, type, initialTab = 'general', onClose, onSaved }: {
+export function EditDialog({ acctId, ratingKey: initialRk, title, type, initialTab = 'general', onClose, onSaved, onReplaced }: {
   acctId: string;
   ratingKey: string;
   title: string;
@@ -48,7 +48,10 @@ export function EditDialog({ acctId, ratingKey, title, type, initialTab = 'gener
   onClose: () => void;
   /** Called with the fresh item after anything was saved, matched or refreshed. */
   onSaved?: (item: FullItem) => void;
+  /** Plex merged this item into another one (matching to a title already in the library). */
+  onReplaced?: (oldRatingKey: string, item: FullItem) => void;
 }) {
+  const [ratingKey, setRatingKey] = useState(initialRk);
   const { acct, notify, busy } = useApp();
   const canEdit = !!acct?.admin;
   const [tab, setTab] = useState<EditTab>(canEdit ? initialTab : 'info');
@@ -123,6 +126,20 @@ export function EditDialog({ acctId, ratingKey, title, type, initialTab = 'gener
     notify(msg, 'ok');
     const f = await load();
     if (f) onSaved?.(f);
+  };
+
+  const matched = async (r: { ratingKey: string; merged: boolean; title?: string; year?: number }) => {
+    if (!r.merged || r.ratingKey === ratingKey) return after('Match applied. Plex is downloading the new metadata.');
+    const old = ratingKey;
+    const f = await api.fullItem(acctId, r.ratingKey).catch(() => null);
+    setRatingKey(r.ratingKey); // the effect reloads the dialog on the new item
+    const versions = f?.media.length ?? 0;
+    notify(
+      `Plex merged this into the existing “${r.title ?? 'title'}${r.year ? ` (${r.year})` : ''}”` +
+        (versions > 1 ? `, which now has ${versions} versions. See the Info tab.` : '.'),
+      'ok',
+    );
+    if (f) onReplaced?.(old, f);
   };
 
   const tabs: { id: EditTab; label: string; show: boolean }[] = [
@@ -215,7 +232,7 @@ export function EditDialog({ acctId, ratingKey, title, type, initialTab = 'gener
         <MatchTab
           acctId={acctId}
           full={full}
-          onMatched={() => after('Match applied. Plex is downloading the new metadata.')}
+          onMatched={matched}
           onUnmatched={() => after('Unmatched')}
           onRefreshed={() => after('Refresh started. New metadata can take a minute to appear.')}
         />
@@ -310,7 +327,7 @@ function TagInput({ acctId, sec, field, type, value, onChange }: {
 function MatchTab({ acctId, full, onMatched, onUnmatched, onRefreshed }: {
   acctId: string;
   full: FullItem;
-  onMatched: () => void;
+  onMatched: (r: { ratingKey: string; merged: boolean; title?: string; year?: number }) => void;
   onUnmatched: () => void;
   onRefreshed: () => void;
 }) {
@@ -363,7 +380,8 @@ function MatchTab({ acctId, full, onMatched, onUnmatched, onRefreshed }: {
               <button
                 onClick={async () => {
                   if (!confirm(`Match “${full.title}” to “${r.name}${r.year ? ` (${r.year})` : ''}”? Plex will replace its unlocked metadata and artwork.`)) return;
-                  if (await busy('Applying match…', async () => (await api.applyMatch(acctId, full.ratingKey, r), true))) onMatched();
+                  const res = await busy('Applying match…', () => api.applyMatch(acctId, full.ratingKey, r));
+                  if (res) onMatched(res);
                 }}
               >
                 Use this match

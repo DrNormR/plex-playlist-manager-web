@@ -14,8 +14,10 @@ const COLLECTABLE = ['movie', 'show', 'artist', 'album'];
  * Right-hand panel for one title: details, artwork, and checkboxes for every
  * playlist (any account) and collection (admin) it can be in.
  */
-export function TitlePanel({ item, onItemChanged, onAddedToPlaylist }: {
+export function TitlePanel({ item, onItemChanged, onAddedToPlaylist, onReplaced }: {
   item: Item;
+  /** The item was merged into another one by Plex; show that one instead. */
+  onReplaced?: (oldRatingKey: string, item: Item) => void;
   /** Called after artwork or metadata changes, with fresh details. */
   onItemChanged?: (fresh: ItemDetails) => void;
   onAddedToPlaylist?: (acctId: string, playlist: { ratingKey: string; title: string }) => void;
@@ -105,6 +107,7 @@ export function TitlePanel({ item, onItemChanged, onAddedToPlaylist }: {
             const d = await loadDetails();
             if (d) onItemChanged?.(d);
           }}
+          onReplaced={(old, fresh) => onReplaced?.(old, fresh)}
         />
       )}
 

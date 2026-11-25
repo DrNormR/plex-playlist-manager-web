@@ -93,7 +93,8 @@ export const api = {
     call<string[]>('GET', `${a(acct)}/libraries/${sec}/tags/${field}${type ? `?type=${type}` : ''}`),
   matches: (acct: string, rk: string, title: string, year: string) =>
     call<MatchResult[]>('GET', `${a(acct)}/items/${rk}/matches?title=${encodeURIComponent(title)}&year=${encodeURIComponent(year)}`),
-  applyMatch: (acct: string, rk: string, m: MatchResult) => call('POST', `${a(acct)}/items/${rk}/match`, { guid: m.guid, name: m.name, year: m.year }),
+  applyMatch: (acct: string, rk: string, m: MatchResult) =>
+    call<{ ok: boolean; ratingKey: string; merged: boolean; title?: string; year?: number }>('POST', `${a(acct)}/items/${rk}/match`, { guid: m.guid, name: m.name, year: m.year }),
   unmatch: (acct: string, rk: string) => call('POST', `${a(acct)}/items/${rk}/unmatch`),
   refreshItem: (acct: string, rk: string) => call('POST', `${a(acct)}/items/${rk}/refresh`),
 
