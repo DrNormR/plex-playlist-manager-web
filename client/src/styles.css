@@ -198,3 +198,61 @@ input[type='checkbox'], input[type='radio'] { accent-color: var(--accent); margi
   .row { grid-template-columns: 22px 36px 20px 30px minmax(120px, 1fr) 48px; }
   .row > :nth-child(n + 7) { display: none; }
 }
+
+/* ---------- library */
+.lib-side { width: 220px; }
+.lib-icon { width: 20px; text-align: center; }
+.lib-toolbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 10px 16px; border-bottom: 1px solid var(--line); }
+.lib-search { max-width: 260px; }
+.year { width: 64px; }
+.crumbs { font-size: 1.05rem; }
+.letters { display: flex; flex-wrap: wrap; gap: 2px; padding: 6px 16px; border-bottom: 1px solid var(--line); }
+.letters button { padding: 2px 7px; font-size: .85em; background: none; border-color: transparent; }
+.letters button.on { background: var(--accent); color: var(--accent-text); }
+.lib-actions { display: flex; gap: 10px; align-items: center; padding: 8px 16px; flex-wrap: wrap; }
+.quick { display: flex; gap: 6px; align-items: center; }
+.quick select { max-width: 220px; }
+.lib-list, .lib-grid { overflow: auto; flex: 1; min-height: 0; padding: 0 16px 40px; }
+.lib-row { display: flex; align-items: center; gap: 10px; padding: 3px 8px; border-radius: var(--radius); cursor: default; user-select: none; }
+.lib-row:hover { background: var(--panel-2); }
+.lib-row.on { background: var(--sel); }
+.lib-row.focus { outline: 1px solid var(--accent); }
+.lib-row .yr { width: 40px; text-align: right; }
+.lib-row .sub { width: 64px; text-align: right; white-space: nowrap; }
+.drill { width: 28px; flex-shrink: 0; }
+.quick-btn { padding: 0 8px; font-weight: 700; color: var(--accent); line-height: 22px; }
+.lib-row .quick-btn { display: none; }
+.lib-row:hover .quick-btn, .lib-row.focus .quick-btn { display: inline-block; }
+.lib-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 14px; align-content: start; padding-top: 8px; }
+.lib-card { cursor: default; padding: 5px; border-radius: 8px; user-select: none; min-width: 0; }
+.lib-card.wide { grid-column: span 2; }
+.lib-card:hover { background: var(--panel-2); }
+.lib-card.on { background: var(--sel); }
+.lib-card.focus { outline: 1px solid var(--accent); }
+.lib-card .poster { position: relative; width: fit-content; }
+.lib-card .poster input { position: absolute; top: 6px; left: 6px; width: 16px; height: 16px; }
+.lib-card .poster .quick-btn { position: absolute; bottom: 6px; right: 6px; background: #000b; border-color: #0000; visibility: hidden; }
+.lib-card:hover .poster .quick-btn { visibility: visible; }
+.badge-watched { position: absolute; top: 5px; right: 6px; background: var(--ok); color: #fff; border-radius: 10px; font-size: .75em; padding: 0 5px; }
+.card-title { margin-top: 5px; font-weight: 500; }
+.sentinel { padding: 20px; text-align: center; color: var(--muted); grid-column: 1 / -1; }
+.summary { color: var(--muted); max-height: 7.5em; overflow: auto; margin: 6px 0; line-height: 1.4; }
+.small-btn { padding: 3px 8px; font-size: .85em; margin-top: 4px; }
+.pad-x { padding: 0 10px 8px; }
+.membership .seg { display: flex; }
+.membership .seg button { flex: 1; }
+
+/* ---------- artwork */
+.dropzone { border: 2px dashed var(--line); border-radius: 10px; padding: 18px; text-align: center; color: var(--muted); cursor: pointer; min-height: 90px; display: grid; place-items: center; }
+.dropzone.over, .dropzone:hover { border-color: var(--accent); color: var(--text); }
+.art-preview { max-height: 220px; max-width: 100%; border-radius: 6px; }
+.art-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 10px; }
+.art-grid.wide { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); }
+.art-option { position: relative; padding: 0; border: 2px solid transparent; background: var(--panel-2); overflow: hidden; border-radius: 6px; aspect-ratio: 2 / 3; }
+.art-grid.wide .art-option { aspect-ratio: 16 / 9; }
+.art-grid.square .art-option { aspect-ratio: 1; }
+.art-option img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.art-option.selected { border-color: var(--accent); }
+.art-option:hover:not(:disabled) { border-color: #f0b02a99; }
+.art-badge { position: absolute; top: 4px; left: 4px; background: var(--accent); color: var(--accent-text); font-size: .75em; font-weight: 700; padding: 0 6px; border-radius: 8px; }
+.art-provider { position: absolute; bottom: 0; left: 0; right: 0; background: #000a; font-size: .7em; padding: 2px 4px; color: #ddd; }

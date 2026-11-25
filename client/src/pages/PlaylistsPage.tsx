@@ -7,6 +7,7 @@ import { AddItemsDialog } from '../components/AddItemsDialog';
 import { TargetPicker } from '../components/TargetPicker';
 import { Modal } from '../components/Modal';
 import { Thumb } from '../components/Thumb';
+import { ArtworkDialog } from '../components/ArtworkDialog';
 import { cmpText, fmtDuration, plural } from '../util';
 
 type ListSort = 'name' | 'size' | 'updated';
@@ -23,7 +24,7 @@ export function PlaylistsPage() {
   const [openId, setOpenId] = useState<string | null>(() => localStorage.getItem(`ppm.pl.${acctId}`));
   const [open, setOpen] = useState<{ playlist: Playlist; items: Item[] } | null>(null);
   const [loadingOpen, setLoadingOpen] = useState(false);
-  const [dialog, setDialog] = useState<null | { t: 'add' } | { t: 'copyItems'; items: Item[] } | { t: 'copyLists'; ids: string[] } | { t: 'rename' }>(null);
+  const [dialog, setDialog] = useState<null | { t: 'add' } | { t: 'copyItems'; items: Item[] } | { t: 'copyLists'; ids: string[] } | { t: 'rename' } | { t: 'art' }>(null);
 
   const loadLists = useCallback(async () => {
     try {
@@ -175,6 +176,7 @@ export function PlaylistsPage() {
                 {p.duration ? <span className="muted small">{fmtDuration(p.duration)}</span> : null}
                 <span className="spacer" />
                 <button onClick={() => setDialog({ t: 'rename' })}>Rename</button>
+                <button onClick={() => setDialog({ t: 'art' })}>Artwork…</button>
                 <button onClick={() => setDialog({ t: 'copyLists', ids: [p.ratingKey] })}>Duplicate / copy to account…</button>
                 <button onClick={() => loadOpen(p.ratingKey)} title="Reload from Plex">↻</button>
                 <button className="danger" onClick={() => deleteLists([p.ratingKey])}>Delete</button>
@@ -221,6 +223,17 @@ export function PlaylistsPage() {
             setChecked(new Set());
             if (target === acctId) loadLists();
           }}
+        />
+      )}
+
+      {dialog?.t === 'art' && p && (
+        <ArtworkDialog
+          acctId={acctId}
+          ratingKey={p.ratingKey}
+          title={p.title}
+          itemType="playlist"
+          onClose={() => setDialog(null)}
+          onChanged={() => loadLists()}
         />
       )}
 

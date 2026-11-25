@@ -2,13 +2,15 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { api, errMsg, setLoginHandler } from './api';
 import { Ctx, type AppContext } from './ctx';
 import type { Account } from './types';
+import { LibraryPage } from './pages/LibraryPage';
 import { PlaylistsPage } from './pages/PlaylistsPage';
 import { CollectionsPage } from './pages/CollectionsPage';
 import { SearchPage } from './pages/SearchPage';
 import { AccountsPage } from './pages/AccountsPage';
 
-type Tab = 'playlists' | 'collections' | 'search' | 'accounts';
+type Tab = 'library' | 'playlists' | 'collections' | 'search' | 'accounts';
 const TABS: { id: Tab; label: string }[] = [
+  { id: 'library', label: 'Library' },
   { id: 'playlists', label: 'Playlists' },
   { id: 'collections', label: 'Collections' },
   { id: 'search', label: 'Search' },
@@ -23,7 +25,7 @@ interface Toast {
 
 const tabFromHash = (): Tab => {
   const h = location.hash.slice(1) as Tab;
-  return TABS.some((t) => t.id === h) ? h : 'playlists';
+  return TABS.some((t) => t.id === h) ? h : 'library';
 };
 
 export function App() {
@@ -161,6 +163,7 @@ export function App() {
         </header>
 
         <div className="content">
+          {shownTab === 'library' && acct && <LibraryPage key={acct.id} />}
           {shownTab === 'playlists' && acct && <PlaylistsPage key={acct.id} />}
           {shownTab === 'collections' && acct && <CollectionsPage key={acct.id} />}
           {shownTab === 'search' && acct && <SearchPage key={acct.id} />}

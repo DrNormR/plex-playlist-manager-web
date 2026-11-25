@@ -6,6 +6,7 @@ import { ItemEditor } from '../components/ItemEditor';
 import { AddItemsDialog } from '../components/AddItemsDialog';
 import { TargetPicker } from '../components/TargetPicker';
 import { Thumb } from '../components/Thumb';
+import { ArtworkDialog } from '../components/ArtworkDialog';
 import { RenameDialog } from './PlaylistsPage';
 import { cmpText, plural } from '../util';
 
@@ -23,7 +24,7 @@ export function CollectionsPage() {
   const [checked, setChecked] = useState<Set<string>>(new Set());
   const [openId, setOpenId] = useState<string | null>(null);
   const [open, setOpen] = useState<{ collection: Collection; items: Item[] } | null>(null);
-  const [dialog, setDialog] = useState<null | 'add' | 'rename' | { copy: Item[] }>(null);
+  const [dialog, setDialog] = useState<null | 'add' | 'rename' | 'art' | { copy: Item[] }>(null);
 
   useEffect(() => {
     setLibs([]);
@@ -190,6 +191,7 @@ export function CollectionsPage() {
                 </span>
                 <span className="spacer" />
                 <button onClick={() => setDialog('rename')}>Rename</button>
+                <button onClick={() => setDialog('art')}>Artwork…</button>
                 <button onClick={() => loadOpen(c.ratingKey)} title="Reload from Plex">↻</button>
                 <button className="danger" onClick={() => deleteCols([c.ratingKey])}>Delete</button>
               </div>
@@ -223,6 +225,16 @@ export function CollectionsPage() {
           itemType={dialog.copy[0]?.type ?? 'movie'}
           onClose={() => setDialog(null)}
           onDone={() => loadLists()}
+        />
+      )}
+      {dialog === 'art' && c && (
+        <ArtworkDialog
+          acctId={acctId}
+          ratingKey={c.ratingKey}
+          title={c.title}
+          itemType="collection"
+          onClose={() => setDialog(null)}
+          onChanged={() => loadLists()}
         />
       )}
       {dialog === 'rename' && c && (

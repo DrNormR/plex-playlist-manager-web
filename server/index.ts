@@ -432,14 +432,142 @@ acctRouter.get('/search', async (req, res) => {
   res.json(hubs);
 });
 
+// --- library browsing
+
+const SECTION_ITEM_TYPE: Record<string, number> = { movie: 1, show: 2, artist: 8, photo: 13 };
+const SORT_FIELD: Record<string, string> = {
+  title: 'titleSort', year: 'year', added: 'addedAt', released: 'originallyAvailableAt', rating: 'audienceRating', viewed: 'lastViewedAt',
+};
+
+async function sectionType(p: Pms, sec: string): Promise<string> {
+  const j = await p.get('/library/sections');
+  const d = (j?.MediaContainer?.Directory ?? []).find((x: any) => String(x.key) === sec);
+  if (!d) throw new PlexError(404, 'Library not found');
+  return d.type;
+}
+
+acctRouter.get('/libraries/:sec/items', async (req, res) => {
+  const p = pms(res);
+  const sec = String(req.params.sec);
+  const q = req.query as Record<string, string | undefined>;
+  const type = SECTION_ITEM_TYPE[await sectionType(p, sec)] ?? 1;
+  const start = Math.max(0, Number(q.start) || 0);
+  const size = Math.min(200, Math.max(1, Number(q.size) || 100));
+  const sortField = SORT_FIELD[q.sort ?? 'title'] ?? 'titleSort';
+  const params: Record<string, string | number | undefined> = {
+    type,
+    sort: `${sortField}:${q.dir === 'desc' ? 'desc' : 'asc'}`,
+    'X-Plex-Container-Start': start,
+    'X-Plex-Container-Size': size,
+    title: q.q?.trim() || undefined,
+    unwatched: q.unwatched === '1' ? 1 : undefined,
+    genre: q.genre || undefined,
+    // Plex filter operators: "year>>" = greater than, "year<<" = less than.
+    'year>>': q.yearMin ? Number(q.yearMin) - 1 : undefined,
+    'year<<': q.yearMax ? Number(q.yearMax) + 1 : undefined,
+  };
+  const path = q.letter
+    ? `/library/sections/${sec}/firstCharacter/${encodeURIComponent(q.letter)}`
+    : `/library/sections/${sec}/all`;
+  const j = await p.get(path, params);
+  const mc = j?.MediaContainer ?? {};
+  const items = (mc.Metadata ?? []).map(normItem);
+  res.json({ total: Number(mc.totalSize ?? mc.size ?? items.length), start, items });
+});
+
+acctRouter.get('/libraries/:sec/genres', async (req, res) => {
+  const p = pms(res);
+  const type = SECTION_ITEM_TYPE[await sectionType(p, String(req.params.sec))] ?? 1;
+  const j = await p.get(`/library/sections/${req.params.sec}/genre`, { type });
+  res.json((j?.MediaContainer?.Directory ?? []).map((d: any) => ({ key: String(d.key), title: d.title })));
+});
+
+acctRouter.get('/libraries/:sec/letters', async (req, res) => {
+  const p = pms(res);
+  const type = SECTION_ITEM_TYPE[await sectionType(p, String(req.params.sec))] ?? 1;
+  const j = await p.get(`/library/sections/${req.params.sec}/firstCharacter`, { type });
+  res.json((j?.MediaContainer?.Directory ?? []).map((d: any) => ({ key: String(d.key ?? d.title), title: d.title, size: Number(d.size ?? 0) })));
+});
+
+acctRouter.get('/items/:rk', async (req, res) => {
+  const j = await pms(res).get(`/library/metadata/${req.params.rk}`);
+  const m = j?.MediaContainer?.Metadata?.[0];
+  if (!m) throw new PlexError(404, 'Title not found');
+  res.json({
+    ...normItem(m),
+    summary: m.summary as string | undefined,
+    collections: ((m.Collection ?? []) as any[]).map((c) => String(c.tag)),
+    librarySectionID: String(m.librarySectionID ?? j?.MediaContainer?.librarySectionID ?? ''),
+  });
+});
+
 acctRouter.get('/items/:rk/children', async (req, res) => {
-  const { items } = await pms(res).getAll(`/library/metadata/${req.params.rk}/allLeaves`);
+  const { items } = await pms(res).getAll(`/library/metadata/${req.params.rk}/children`);
   res.json(items.map(normItem));
 });
 
+// --- artwork (posters/thumbnails and background art) for titles, collections and playlists
+
+const artKind = (k: unknown) => {
+  if (k !== 'poster' && k !== 'art') throw new PlexError(400, 'Artwork kind must be poster or art');
+  return k as 'poster' | 'art';
+};
+const listPath = (rk: string, kind: 'poster' | 'art') => `/library/metadata/${rk}/${kind === 'poster' ? 'posters' : 'arts'}`;
+const rkParam = (v: unknown) => {
+  const s = String(v);
+  if (!/^\d+$/.test(s)) throw new PlexError(400, 'Bad item id');
+  return s;
+};
+
+acctRouter.get('/art/:rk/:kind', async (req, res) => {
+  const rk = rkParam(req.params.rk);
+  const j = await pms(res).get(listPath(rk, artKind(req.params.kind)));
+  res.json(
+    (j?.MediaContainer?.Metadata ?? []).map((m: any) => ({
+      key: String(m.key ?? m.ratingKey),
+      thumb: m.thumb as string | undefined,
+      selected: !!m.selected,
+      provider: m.provider as string | undefined,
+    })),
+  );
+});
+
+acctRouter.post('/art/:rk/:kind/select', async (req, res) => {
+  const rk = rkParam(req.params.rk);
+  const kind = artKind(req.params.kind);
+  const url = String(req.body?.url ?? '');
+  if (!url) throw new PlexError(400, 'Missing artwork key');
+  await pms(res).put(`/library/metadata/${rk}/${kind}`, { url });
+  res.json({ ok: true });
+});
+
+acctRouter.post('/art/:rk/:kind/url', async (req, res) => {
+  const rk = rkParam(req.params.rk);
+  const url = String(req.body?.url ?? '').trim();
+  if (!/^https?:\/\/\S+$/i.test(url)) throw new PlexError(400, 'Enter an http(s) image URL');
+  await pms(res).post(listPath(rk, artKind(req.params.kind)), { url });
+  res.json({ ok: true });
+});
+
+const IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+acctRouter.post(
+  '/art/:rk/:kind/upload',
+  express.raw({ type: IMAGE_TYPES, limit: '20mb' }),
+  async (req, res) => {
+    const rk = rkParam(req.params.rk);
+    const kind = artKind(req.params.kind);
+    const type = String(req.headers['content-type'] ?? '').split(';')[0];
+    if (!IMAGE_TYPES.includes(type) || !Buffer.isBuffer(req.body) || !req.body.length) {
+      throw new PlexError(400, 'Upload a JPEG, PNG or WebP image (max 20 MB)');
+    }
+    await pms(res).upload(listPath(rk, kind), req.body, type);
+    res.json({ ok: true });
+  },
+);
+
 acctRouter.get('/thumb', async (req, res) => {
   const src = String(req.query.path ?? '');
-  if (!/^\/(library|playlists)\//.test(src)) throw new PlexError(400, 'Bad image path');
+  if (!/^\/(library|playlists|photo)\//.test(src)) throw new PlexError(400, 'Bad image path');
   const w = Math.min(Number(req.query.w) || 80, 600);
   const h = Math.min(Number(req.query.h) || 120, 900);
   const r = await pms(res).raw('/photo/:/transcode', { url: src, width: w, height: h, minSize: 1, upscale: 1 });

@@ -24,6 +24,11 @@ export interface Item {
   parentIndex?: number;
   index?: number;
   leafCount?: number;
+  viewedLeafCount?: number;
+  childCount?: number;
+  rating?: number;
+  art?: string;
+  librarySectionID?: string;
   grandparentKey?: string;
   parentKey?: string;
 }
@@ -78,3 +83,24 @@ export interface HomeUser {
   protected: boolean;
   addedAs?: string;
 }
+
+export interface ItemDetails extends Item {
+  summary?: string;
+  collections: string[];
+  librarySectionID: string;
+}
+
+export interface LibraryPageResult {
+  total: number;
+  start: number;
+  items: Item[];
+}
+
+export interface ArtOption {
+  key: string;
+  thumb?: string;
+  selected: boolean;
+  provider?: string;
+}
+
+export type ArtKind = 'poster' | 'art';

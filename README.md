@@ -11,6 +11,19 @@ fighting the Plex UI. It replaces the old WinForms
 - Add your **Plex Home** users (family profiles) from the admin account. A PIN is asked once if the profile has one, and it isn't stored.
 - Switch accounts from the top bar. Each account sees and edits its own playlists.
 
+**Library**
+- Browse any library as a list or a poster grid, 100 titles at a time as you scroll.
+- Filter by title, genre, year range, or unwatched, or jump to a starting letter. Sort by title, year, date added, release date, rating, or last watched.
+- **Not in any playlist** shows only titles you haven't put in a playlist yet.
+- Drill into shows → seasons → episodes, and artists → albums → tracks.
+- Click a title to see its details, and tick or untick playlists (any account) and collections (admin) in the side panel.
+- Tick several titles to add them anywhere at once, or pick a **Quick add** playlist and use the **+** button on each title.
+
+**Artwork**
+- Change a poster/thumbnail or background art for titles, playlists, and collections.
+- Upload a file (choose or drag-and-drop JPEG, PNG or WebP, up to 20 MB), paste an image URL, or pick one of the alternatives Plex already has.
+- Changing a title's or collection's artwork needs the server admin account.
+
 **Playlists**
 - Filter, sort, and bulk-select playlists. Bulk **delete**, or bulk **copy to another account** (in the same order).
 - Drag-and-drop reorder with **multi-select** (Ctrl/Shift-click, then drag the group).

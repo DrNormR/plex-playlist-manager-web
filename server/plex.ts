@@ -30,6 +30,8 @@ interface ReqOpts {
   method?: string;
   token?: string;
   timeoutMs?: number;
+  body?: Uint8Array;
+  contentType?: string;
 }
 
 export async function rawRequest(url: string, opts: ReqOpts = {}): Promise<Response> {
@@ -37,7 +39,8 @@ export async function rawRequest(url: string, opts: ReqOpts = {}): Promise<Respo
   try {
     return await fetch(url, {
       method,
-      headers: plexHeaders(opts.token),
+      headers: opts.contentType ? { ...plexHeaders(opts.token), 'Content-Type': opts.contentType } : plexHeaders(opts.token),
+      body: opts.body as BodyInit | undefined,
       signal: AbortSignal.timeout(opts.timeoutMs ?? 30000),
     });
   } catch (e: any) {
@@ -210,6 +213,9 @@ export class Pms {
   del<T = any>(path: string, params?: Record<string, string | number | undefined>) {
     return request<T>(this.url(path, params), { method: 'DELETE', token: this.token });
   }
+  upload<T = any>(path: string, body: Uint8Array, contentType: string) {
+    return request<T>(this.url(path), { method: 'POST', token: this.token, body, contentType, timeoutMs: 60000 });
+  }
   raw(path: string, params?: Record<string, string | number | undefined>) {
     return rawRequest(this.url(path, params), { token: this.token });
   }
@@ -257,6 +263,11 @@ export interface Item {
   parentIndex?: number;
   index?: number;
   leafCount?: number;
+  viewedLeafCount?: number;
+  childCount?: number;
+  rating?: number;
+  art?: string;
+  librarySectionID?: string;
   /** Show (episodes) or artist (tracks). */
   grandparentKey?: string;
   /** Season (episodes), show (seasons), album (tracks) or artist (albums). */
@@ -291,6 +302,11 @@ export function normItem(m: any): Item {
     parentIndex: m.parentIndex,
     index: m.index,
     leafCount: m.leafCount,
+    viewedLeafCount: m.viewedLeafCount,
+    childCount: m.childCount,
+    rating: m.audienceRating ?? m.rating,
+    art: m.art,
+    librarySectionID: m.librarySectionID !== undefined ? String(m.librarySectionID) : undefined,
     grandparentKey: m.grandparentRatingKey ? String(m.grandparentRatingKey) : undefined,
     parentKey: m.parentRatingKey ? String(m.parentRatingKey) : undefined,
   };

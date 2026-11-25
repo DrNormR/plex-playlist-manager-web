@@ -1,4 +1,4 @@
-import type { Account, Collection, HomeUser, IndexedPlaylist, Item, Library, Playlist, SearchHub } from './types';
+import type { Account, ArtKind, ArtOption, Collection, HomeUser, IndexedPlaylist, Item, ItemDetails, Library, LibraryPageResult, Playlist, SearchHub } from './types';
 
 export class ApiError extends Error {
   constructor(
@@ -73,11 +73,39 @@ export const api = {
     call<{ removed: number; moves: number; items: Item[] }>('POST', `${a(acct)}/collections/${id}/apply`, { remove, order }),
 
   search: (acct: string, q: string) => call<SearchHub[]>('GET', `${a(acct)}/search?q=${encodeURIComponent(q)}`),
-  leaves: (acct: string, rk: string) => call<Item[]>('GET', `${a(acct)}/items/${rk}/children`),
+  item: (acct: string, rk: string) => call<ItemDetails>('GET', `${a(acct)}/items/${rk}`),
+  children: (acct: string, rk: string) => call<Item[]>('GET', `${a(acct)}/items/${rk}/children`),
+  removeFromCollection: (acct: string, id: string, ratingKey: string) =>
+    call('POST', `${a(acct)}/collections/${id}/apply`, { remove: [ratingKey], order: [] }),
+
+  libraryItems: (acct: string, sec: string, params: Record<string, string | number | undefined>) => {
+    const qs = new URLSearchParams();
+    for (const [k, v] of Object.entries(params)) if (v !== undefined && v !== '') qs.set(k, String(v));
+    return call<LibraryPageResult>('GET', `${a(acct)}/libraries/${sec}/items?${qs}`);
+  },
+  genres: (acct: string, sec: string) => call<{ key: string; title: string }[]>('GET', `${a(acct)}/libraries/${sec}/genres`),
+  letters: (acct: string, sec: string) => call<{ key: string; title: string; size: number }[]>('GET', `${a(acct)}/libraries/${sec}/letters`),
+
+  artOptions: (acct: string, rk: string, kind: ArtKind) => call<ArtOption[]>('GET', `${a(acct)}/art/${rk}/${kind}`),
+  selectArt: (acct: string, rk: string, kind: ArtKind, url: string) => call('POST', `${a(acct)}/art/${rk}/${kind}/select`, { url }),
+  artFromUrl: (acct: string, rk: string, kind: ArtKind, url: string) => call('POST', `${a(acct)}/art/${rk}/${kind}/url`, { url }),
+  async uploadArt(acct: string, rk: string, kind: ArtKind, file: File) {
+    const res = await fetch(`${a(acct)}/art/${rk}/${kind}/upload`, {
+      method: 'POST',
+      headers: { 'Content-Type': file.type },
+      body: file,
+      credentials: 'same-origin',
+    });
+    if (!res.ok) {
+      const data = await res.json().catch(() => undefined);
+      if (data?.code === 'LOGIN') onLoginRequired();
+      throw new ApiError(res.status, data?.error ?? `${res.status} ${res.statusText}`, data?.code);
+    }
+  },
 };
 
 export const thumbUrl = (acct: string, path: string | undefined, w = 60, h = 90) =>
-  path ? `${a(acct)}/thumb?path=${encodeURIComponent(path)}&w=${w}&h=${h}` : undefined;
+  !path ? undefined : /^https?:\/\//i.test(path) ? path : `${a(acct)}/thumb?path=${encodeURIComponent(path)}&w=${w}&h=${h}`;
 
 export function errMsg(e: unknown) {
   return e instanceof Error ? e.message : String(e);
