@@ -486,7 +486,7 @@ acctRouter.get('/libraries/:sec/letters', async (req, res) => {
   const p = pms(res);
   const type = SECTION_ITEM_TYPE[await sectionType(p, String(req.params.sec))] ?? 1;
   const j = await p.get(`/library/sections/${req.params.sec}/firstCharacter`, { type });
-  res.json((j?.MediaContainer?.Directory ?? []).map((d: any) => ({ key: String(d.key ?? d.title), title: d.title, size: Number(d.size ?? 0) })));
+  res.json((j?.MediaContainer?.Directory ?? []).map((d: any) => ({ key: String(d.title), title: String(d.title), size: Number(d.size ?? 0) })));
 });
 
 acctRouter.get('/items/:rk', async (req, res) => {
