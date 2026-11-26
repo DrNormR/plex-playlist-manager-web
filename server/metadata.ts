@@ -1,5 +1,6 @@
 import type { Response, Router } from 'express';
 import { PlexError, Pms, TYPE_NUM, normItem } from './plex.js';
+import { fileStem, guessTitleYear } from './filenames.js';
 
 /** Plain-text fields Plex lets you edit (and lock) per item. */
 export const TEXT_FIELDS = [
@@ -26,6 +27,19 @@ async function rawMeta(p: Pms, rk: string) {
   return { m, sectionId: String(m.librarySectionID ?? j?.MediaContainer?.librarySectionID ?? '') };
 }
 
+/** Title and year as read from the file (movies) or folder (shows, artists, albums) name. */
+function nameGuess(m: any) {
+  let name = '';
+  if (m.type === 'movie') {
+    const file = m.Media?.[0]?.Part?.[0]?.file;
+    if (file) name = fileStem(String(file));
+  } else if (['show', 'artist', 'album'].includes(m.type)) {
+    const loc = m.Location?.[0]?.path;
+    if (loc) name = fileStem(String(loc), true);
+  }
+  return name ? { name, ...guessTitleYear(name) } : undefined;
+}
+
 function fullDetails(m: any, sectionId: string) {
   const fields: Record<string, string> = {};
   for (const f of TEXT_FIELDS) if (m[f] !== undefined && m[f] !== null) fields[f] = String(m[f]);
@@ -45,6 +59,7 @@ function fullDetails(m: any, sectionId: string) {
     lastViewedAt: m.lastViewedAt as number | undefined,
     viewCount: m.viewCount as number | undefined,
     locations: ((m.Location ?? []) as any[]).map((l) => String(l.path)),
+    fromName: nameGuess(m),
     media: ((m.Media ?? []) as any[]).map((md) => ({
       id: String(md.id),
       videoResolution: md.videoResolution,

@@ -1,4 +1,4 @@
-import type { Account, ArtKind, ArtOption, FullItem, MatchResult, WebImage, Collection, HomeUser, IndexedPlaylist, Item, ItemDetails, Library, LibraryPageResult, Playlist, SearchHub } from './types';
+import type { AutoDateRule, DateOptions, DatePlan, Account, ArtKind, ArtOption, FullItem, MatchResult, WebImage, Collection, HomeUser, IndexedPlaylist, Item, ItemDetails, Library, LibraryPageResult, Playlist, SearchHub } from './types';
 
 export class ApiError extends Error {
   constructor(
@@ -105,6 +105,16 @@ export const api = {
   imageSearch: (q: string, page = 0) =>
     call<{ results: WebImage[]; cached: boolean }>('GET', `/api/image-search?q=${encodeURIComponent(q)}&page=${page}`),
 
+  dateScan: (acct: string, sec: string, o: DateOptions) =>
+    call<{ library: { key: string; title: string; type: string }; items: DatePlan[]; auto: AutoDateRule | null }>(
+      'GET',
+      `${a(acct)}/libraries/${sec}/date-scan?yearOnly=${o.yearOnly}&setTitle=${o.setTitle ? 1 : 0}`,
+    ),
+  dateApply: (acct: string, sec: string, items: Pick<DatePlan, 'ratingKey' | 'set'>[]) =>
+    call<{ changed: number; failed: { ratingKey: string; error: string }[] }>('POST', `${a(acct)}/libraries/${sec}/date-apply`, { items }),
+  dateAuto: (acct: string, sec: string, enabled: boolean, o: DateOptions) =>
+    call<AutoDateRule | null>('PUT', `${a(acct)}/libraries/${sec}/date-auto`, { enabled, ...o }),
+  dateAutoRun: (acct: string, sec: string) => call<AutoDateRule>('POST', `${a(acct)}/libraries/${sec}/date-auto/run`),
   setWatched: (acct: string, ratingKeys: string[], watched: boolean) =>
     call<{ ok: boolean; count: number }>('POST', `${a(acct)}/watched`, { ratingKeys, watched }),
   episodesFor: (acct: string, items: { ratingKey: string; type: string }[], which: 'first' | 'next') =>

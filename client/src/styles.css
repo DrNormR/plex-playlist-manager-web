@@ -312,3 +312,17 @@ textarea { font: inherit; color: inherit; background: var(--panel-2); border: 1p
 .add-mode { display: inline-flex; gap: 6px; align-items: center; font-size: .9em; color: var(--muted); }
 .add-mode select { color: var(--text); }
 .pick-tools { padding: 0; }
+
+/* dates from file names */
+.dates { display: flex; flex-direction: column; gap: 10px; }
+.dates p { margin: 0; }
+.dates-opts { display: flex; flex-wrap: wrap; gap: 8px 18px; align-items: center; }
+.dates-auto { border: 1px solid var(--line); border-radius: var(--radius); padding: 8px 10px; display: flex; flex-direction: column; gap: 4px; }
+.dates-table { max-height: 50vh; overflow: auto; border: 1px solid var(--line); border-radius: var(--radius); }
+.dates-table table { width: 100%; border-collapse: collapse; }
+.dates-table th { position: sticky; top: 0; background: var(--panel); text-align: left; font-weight: 600; font-size: 12px; padding: 6px 8px; z-index: 1; }
+.dates-table td { padding: 6px 8px; border-top: 1px solid var(--line); vertical-align: top; }
+.dates-table td:nth-child(2) { max-width: 0; width: 100%; }
+.dates-table tbody tr { cursor: pointer; }
+.dates-table tbody tr:hover { background: var(--panel-2); }
+.new-val { color: var(--accent); font-weight: 600; }

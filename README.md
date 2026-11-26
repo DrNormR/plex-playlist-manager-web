@@ -1,6 +1,6 @@
-# Plex Playlist Manager (web)
+# Plex Manager
 
-A web app for managing **lots** of Plex playlists and collections, across several accounts, without
+A web app for managing **lots** of Plex playlists, collections and metadata, across several accounts, without
 fighting the Plex UI. It replaces the old WinForms
 [plex-playlist-manager](https://github.com/DrNormR/plex-playlist-manager).
 
@@ -26,8 +26,18 @@ fighting the Plex UI. It replaces the old WinForms
 - **General:** title, sort title, original title, edition, release date, year, content rating, studio, tagline, and summary. The fields shown depend on the type (movie, show, season, episode, artist, album, track).
 - **Tags:** genres, labels, collections, directors, writers, producers, countries, styles, and moods, as chips with suggestions from the library. Typing a new collection name creates that collection.
 - Every field has a 🔒 lock like in Plex. Editing a field locks it, so a metadata refresh won't overwrite your change.
-- **Match:** search for a match and apply it (Fix Match), unmatch, or refresh metadata.
+- **Match:** search for a match and apply it (Fix Match), unmatch, or refresh metadata. The search starts with the title and year read from the **file name** (or the folder name for shows), e.g. `The.Crucible.1996.1080p.BluRay.x264.mkv` → *The Crucible*, 1996. One click switches back to the current Plex title.
 - **Info:** file paths (with a Copy button), resolution, codecs, bitrate, size, streams, external IDs, and dates. Any account can see Info; editing and matching need the server admin account.
+
+**Dates from file names** (sports libraries; 📅 button in the Library toolbar, admin account)
+- Reads the date in names like `MLB - 2025-11-01 - Dodgers at Blue Jays (World Series Game 7).mp4` (full date) or
+  `Super Bowl 56 - 2022 - Rams vs. Bengals.mp4` (year only) and sets each title's **year** and **release date**. If the file name has no date, its folder name is tried.
+  It also understands `2024.01.15`, `2024_01_15` and `01-15-2024`.
+- Shows a preview of what would change (now → new). Untick any rows you want to skip, then update them all at once.
+- Year-only names can set the release date to Jan 1 of that year (an exact date already in that year is kept), or set the year only.
+- Optionally also set the title to the file name.
+- Works on movie libraries (each movie) and TV libraries (each episode). Changed fields are locked so a Plex refresh won't undo them.
+- **Automatic:** tick it for a library and titles added from then on are updated every 30 minutes (`AUTO_DATES_MINUTES` changes that), with **Check now** to run it right away.
 
 **Artwork**
 - Change a poster/thumbnail or background art for titles, playlists, and collections.
@@ -80,12 +90,12 @@ Accounts and tokens are saved in `./data/config.json` (file mode 600). Back up t
 ```bash
 npm install
 npm run dev        # API on :8080, UI with hot reload on http://localhost:5173
-npm test           # reorder algorithm tests
+npm test           # reorder, metadata and file-name parsing tests
 npm run typecheck
 npm run build && npm start   # production build on :8080
 ```
 
-Environment variables: `PLEX_URL`, `APP_PASSWORD`, `PORT` (default 8080), `DATA_DIR` (default `./data`), and optionally `SERPAPI_KEY` (instead of entering it on the Accounts page).
+Environment variables: `PLEX_URL`, `APP_PASSWORD`, `PORT` (default 8080), `DATA_DIR` (default `./data`), optionally `SERPAPI_KEY` (instead of entering it on the Accounts page), and `AUTO_DATES_MINUTES` (default 30).
 
 ## Notes
 

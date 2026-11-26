@@ -130,7 +130,7 @@ export function App() {
       <div className="app">
         <header className="topbar">
           <div className="brand">
-            <span className="logo">≡</span> Playlist Manager
+            <span className="logo">≡</span> Plex Manager
           </div>
           <nav>
             {TABS.map((t) => (
@@ -205,7 +205,7 @@ function Login({ onDone }: { onDone: () => void }) {
           }
         }}
       >
-        <h1>Playlist Manager</h1>
+        <h1>Plex Manager</h1>
         <input type="password" autoFocus placeholder="App password" value={pw} onChange={(e) => setPw(e.target.value)} />
         {err && <div className="error-text small">{err}</div>}
         <button className="primary">Log in</button>

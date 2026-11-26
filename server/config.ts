@@ -21,6 +21,21 @@ export interface Account {
   serverOwner?: boolean;
 }
 
+/** A library whose newly added titles get year/release date from their file names. */
+export interface AutoDateRule {
+  acctId: string;
+  sec: string;
+  library: string;
+  yearOnly: 'jan1' | 'keep';
+  setTitle: boolean;
+  /** Only titles added after this time (unix seconds) are processed. */
+  since: number;
+  lastRun?: string;
+  lastChanged?: number;
+  totalChanged?: number;
+  lastError?: string;
+}
+
 export interface Config {
   clientId: string;
   sessionSecret: string;
@@ -28,6 +43,7 @@ export interface Config {
   accounts: Account[];
   /** SerpApi key for web image search in the artwork dialog. */
   serpApiKey?: string;
+  autoDates?: AutoDateRule[];
 }
 
 const DATA_DIR = process.env.DATA_DIR || path.resolve('data');
@@ -49,6 +65,7 @@ export function getConfig(): Config {
     serverUrl: process.env.PLEX_URL || loaded.serverUrl || '',
     accounts: loaded.accounts || [],
     serpApiKey: loaded.serpApiKey,
+    autoDates: loaded.autoDates ?? [],
   };
   saveConfig();
   return cfg;

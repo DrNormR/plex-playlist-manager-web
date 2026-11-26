@@ -9,7 +9,7 @@ export class PlexError extends Error {
   }
 }
 
-export const PRODUCT = 'Plex Playlist Manager';
+export const PRODUCT = 'Plex Manager';
 const VERSION = '2.0.0';
 
 export function plexHeaders(token?: string): Record<string, string> {

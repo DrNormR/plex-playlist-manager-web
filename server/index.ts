@@ -11,6 +11,7 @@ import {
 import { planMoves } from './reorder.js';
 import { registerMetadataRoutes } from './metadata.js';
 import { registerImageSearchRoutes } from './imageSearch.js';
+import { registerDateRoutes, startAutoDates } from './fileDates.js';
 
 const PORT = Number(process.env.PORT || 8080);
 const APP_PASSWORD = process.env.APP_PASSWORD || '';
@@ -527,6 +528,7 @@ acctRouter.get('/items/:rk/children', async (req, res) => {
 });
 
 registerMetadataRoutes(acctRouter, pms);
+registerDateRoutes(acctRouter, pms);
 
 // --- artwork (posters/thumbnails and background art) for titles, collections and playlists
 
@@ -623,7 +625,15 @@ app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
   res.status(status).json({ error: err?.message ?? 'Server error', code });
 });
 
+startAutoDates(
+  (id) => {
+    const a = cfg.accounts.find((x) => x.id === id);
+    return a && cfg.serverUrl ? new Pms(cfg.serverUrl, a.serverToken) : undefined;
+  },
+  Number(process.env.AUTO_DATES_MINUTES) || 30,
+);
+
 app.listen(PORT, () => {
-  console.log(`Plex Playlist Manager listening on http://localhost:${PORT}`);
+  console.log(`Plex Manager listening on http://localhost:${PORT}`);
   if (!APP_PASSWORD) console.log('APP_PASSWORD is not set: anyone who can reach this port can manage your Plex playlists.');
 });

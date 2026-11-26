@@ -151,7 +151,37 @@ export interface FullItem extends Item {
   updatedAt?: number;
   lastViewedAt?: number;
   locations: string[];
+  /** Title and year guessed from the file or folder name. */
+  fromName?: { name: string; title: string; year?: number };
   media: MediaInfo[];
+}
+
+export interface DateOptions {
+  yearOnly: 'jan1' | 'keep';
+  setTitle: boolean;
+}
+
+export interface DatePlan {
+  ratingKey: string;
+  title: string;
+  show?: string;
+  file?: string;
+  year?: number;
+  date?: string;
+  addedAt?: number;
+  parsed: { year: number; date?: string } | null;
+  set: { year?: string; originallyAvailableAt?: string; title?: string };
+}
+
+export interface AutoDateRule extends DateOptions {
+  acctId: string;
+  sec: string;
+  library: string;
+  since: number;
+  lastRun?: string;
+  lastChanged?: number;
+  totalChanged?: number;
+  lastError?: string;
 }
 
 export interface MatchResult {

@@ -332,8 +332,11 @@ function MatchTab({ acctId, full, onMatched, onUnmatched, onRefreshed }: {
   onRefreshed: () => void;
 }) {
   const { busy } = useApp();
-  const [q, setQ] = useState(full.fields.title ?? full.title);
-  const [year, setYear] = useState(full.fields.year ?? (full.year ? String(full.year) : ''));
+  const fromName = full.fromName;
+  const plexTitle = full.fields.title ?? full.title;
+  const plexYear = full.fields.year ?? (full.year ? String(full.year) : '');
+  const [q, setQ] = useState(fromName?.title || plexTitle);
+  const [year, setYear] = useState(fromName ? (fromName.year ? String(fromName.year) : '') : plexYear);
   const [results, setResults] = useState<MatchResult[] | null>(null);
   const [error, setError] = useState('');
   const [searching, setSearching] = useState(false);
@@ -363,6 +366,19 @@ function MatchTab({ acctId, full, onMatched, onUnmatched, onRefreshed }: {
         <input className="year" value={year} onChange={(e) => setYear(e.target.value.replace(/\D/g, '').slice(0, 4))} placeholder="Year" inputMode="numeric" />
         <button className="primary" disabled={searching || !q.trim()}>{searching ? 'Searching…' : 'Search'}</button>
       </form>
+      {fromName && (
+        <div className="muted small">
+          From the {full.type === 'movie' ? 'file' : 'folder'} name <code>{fromName.name}</code>
+          {' · '}
+          <button className="link" type="button" onClick={() => (setQ(fromName.title), setYear(fromName.year ? String(fromName.year) : ''))}>
+            use file name
+          </button>
+          {' · '}
+          <button className="link" type="button" onClick={() => (setQ(plexTitle), setYear(plexYear))}>
+            use current Plex title
+          </button>
+        </div>
+      )}
       {error && <div className="banner error">{error}</div>}
       {results && !results.length && <div className="muted">No matches found. Try a different title or year.</div>}
       <div className="match-list">

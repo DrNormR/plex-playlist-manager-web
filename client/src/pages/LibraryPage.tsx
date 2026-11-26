@@ -5,6 +5,7 @@ import type { Item, Library } from '../types';
 import { Thumb } from '../components/Thumb';
 import { TitlePanel } from '../components/TitlePanel';
 import { TargetPicker } from '../components/TargetPicker';
+import { DatesDialog } from '../components/DatesDialog';
 import { AddModeSelect, hasGroups, resolveForAdd, useAddMode } from '../components/addMode';
 import { invalidatePlaylistIndex, isGroupType, keysInPlaylists, refreshIndexedPlaylist, usePlaylistIndex } from '../components/playlistIndex';
 import { TYPE_LABEL, cmpText, fmtDuration, plural } from '../util';
@@ -225,6 +226,7 @@ export function LibraryPage() {
     notify(`Marked ${plural(list.length, 'title')} ${watched ? 'watched' : 'unwatched'} for ${acct!.name}`, 'ok');
   };
 
+  const [datesOpen, setDatesOpen] = useState(false);
   const setF = (patch: Partial<Filters>) => setFilters((f) => ({ ...f, ...patch }));
   const filtered = !!(filters.q || filters.unwatched || filters.genre || filters.yearMin || filters.yearMax || filters.letter);
 
@@ -235,6 +237,9 @@ export function LibraryPage() {
 
   return (
     <div className="split">
+      {datesOpen && lib && (
+        <DatesDialog sec={lib.key} libraryTitle={lib.title} onClose={() => setDatesOpen(false)} onChanged={() => setFilters((f) => ({ ...f }))} />
+      )}
       <aside className="sidebar lib-side">
         <div className="side-tools"><strong>Libraries</strong></div>
         {libError && <div className="banner error">{libError}</div>}
@@ -299,6 +304,11 @@ export function LibraryPage() {
             <button className="link" onClick={() => (setFilters({ ...NO_FILTERS, sort: filters.sort, dir: filters.dir }), setQInput(''))}>Clear filters</button>
           )}
           <span className="spacer" />
+          {acct!.admin && !trail.length && (lib?.type === 'movie' || lib?.type === 'show') && (
+            <button onClick={() => setDatesOpen(true)} title="Set year and release date from each file name (for sports libraries)">
+              📅 Dates from file names…
+            </button>
+          )}
           <div className="seg">
             <button className={view === 'list' ? 'on' : ''} onClick={() => changeView('list')} title="List view">☰</button>
             <button className={view === 'grid' ? 'on' : ''} onClick={() => changeView('grid')} title="Poster view">▦</button>
