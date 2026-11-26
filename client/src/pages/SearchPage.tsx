@@ -93,8 +93,7 @@ export function SearchPage() {
         <TargetPicker
           kind="playlist"
           switchable
-          ratingKeys={adding.map((i) => i.ratingKey)}
-          itemType={adding[0].type}
+          items={adding}
           defaultTitle={adding.length === 1 ? adding[0].title : ''}
           onClose={() => setAdding(null)}
           onDone={(a) => {

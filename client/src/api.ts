@@ -105,6 +105,11 @@ export const api = {
   imageSearch: (q: string, page = 0) =>
     call<{ results: WebImage[]; cached: boolean }>('GET', `/api/image-search?q=${encodeURIComponent(q)}&page=${page}`),
 
+  setWatched: (acct: string, ratingKeys: string[], watched: boolean) =>
+    call<{ ok: boolean; count: number }>('POST', `${a(acct)}/watched`, { ratingKeys, watched }),
+  episodesFor: (acct: string, items: { ratingKey: string; type: string }[], which: 'first' | 'next') =>
+    call<Record<string, { ratingKey: string; title: string } | null>>('POST', `${a(acct)}/items/episodes`, { items, which }),
+
   artOptions: (acct: string, rk: string, kind: ArtKind) => call<ArtOption[]>('GET', `${a(acct)}/art/${rk}/${kind}`),
   selectArt: (acct: string, rk: string, kind: ArtKind, url: string) => call('POST', `${a(acct)}/art/${rk}/${kind}/select`, { url }),
   artFromUrl: (acct: string, rk: string, kind: ArtKind, url: string) => call('POST', `${a(acct)}/art/${rk}/${kind}/url`, { url }),

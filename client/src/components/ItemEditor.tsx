@@ -9,6 +9,7 @@ import type { Item } from '../types';
 import { SORTS, fmtDuration, plural, sortItems, TYPE_LABEL, type SortKey } from '../util';
 import { Thumb } from './Thumb';
 import { useApp } from '../ctx';
+import { api } from '../api';
 
 interface Props {
   mode: 'playlist' | 'collection';
@@ -168,6 +169,18 @@ export function ItemEditor({ mode, acctId, items, readOnly, readOnlyReason, onAp
   };
   const removeWatched = () => removeKeys(new Set(draft.filter((i) => i.viewCount).map(keyOf)), 'watched items');
   const applySort = (k: SortKey) => commit(sortItems(draft, k));
+
+  // Watched state isn't part of the list, so it applies right away (not on Save).
+  const markWatched = async (watched: boolean) => {
+    const keys = [...new Set(selItems.map((i) => i.ratingKey))];
+    const ok = await busy(watched ? 'Marking watched…' : 'Marking unwatched…', () => api.setWatched(acctId, keys, watched));
+    if (!ok) return;
+    const set = new Set(keys);
+    const patch = (l: Item[]) => l.map((i) => (set.has(i.ratingKey) ? { ...i, viewCount: watched ? 1 : 0 } : i));
+    setDraft(patch);
+    setHistory((h) => h.map((snap) => ({ ...snap, draft: patch(snap.draft) })));
+    notify(`Marked ${keys.length} ${keys.length === 1 ? 'item' : 'items'} ${watched ? 'watched' : 'unwatched'}`, 'ok');
+  };
   const sortSelectionOnly = (k: SortKey) => {
     // Sort just the selected rows, keeping them in the slots they occupy.
     const slots = draft.map((i, n) => (selected.has(keyOf(i)) ? n : -1)).filter((n) => n >= 0);
@@ -298,6 +311,10 @@ export function ItemEditor({ mode, acctId, items, readOnly, readOnlyReason, onAp
             <button disabled={!selected.size} onClick={removeSelected} title="Remove selected (Delete)">Remove</button>
             {mode === 'playlist' && <button onClick={removeDuplicates}>Remove duplicates</button>}
             {mode === 'playlist' && <button onClick={removeWatched} title="Watched by the current account">Remove watched</button>}
+          </div>
+          <div className="group">
+            <button disabled={!selected.size} onClick={() => markWatched(true)}>Mark watched</button>
+            <button disabled={!selected.size} onClick={() => markWatched(false)}>Mark unwatched</button>
           </div>
           <div className="group">
             {onCopySelected && (

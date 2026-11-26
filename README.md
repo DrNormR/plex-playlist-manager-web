@@ -18,6 +18,9 @@ fighting the Plex UI. It replaces the old WinForms
 - Drill into shows → seasons → episodes, and artists → albums → tracks.
 - Click a title to see its details, and tick or untick playlists (any account) and collections (admin) in the side panel.
 - Tick several titles to add them anywhere at once, or pick a **Quick add** playlist and use the **+** button on each title.
+- **Add to playlists** lets you tick any number of playlists (or collections), plus a new one, and adds to all of them in one go.
+- **For shows add:** when you add a show or season to a playlist, choose **First episode** (the default), **Next unwatched episode** (using that account's watch history), or **All episodes**. Specials (season 0) are skipped. The choice is remembered.
+- **Mark watched / unwatched** for one title (side panel) or many (tick them first), for the current account. Shows and seasons mark all their episodes.
 
 **Edit, match & info** (Edit…, Match… and Info buttons in the title panel)
 - **General:** title, sort title, original title, edition, release date, year, content rating, studio, tagline, and summary. The fields shown depend on the type (movie, show, season, episode, artist, album, track).
@@ -35,6 +38,8 @@ fighting the Plex UI. It replaces the old WinForms
 
 **Playlists**
 - Filter, sort, and bulk-select playlists. Bulk **delete**, or bulk **copy to another account** (in the same order).
+- **Copy between profiles** (e.g. robertlnorman ↔ Family): as a new playlist, or **into an existing playlist** on the other profile, skipping titles already there. It warns if the other profile can't see some titles (libraries not shared with it).
+- Mark selected items watched or unwatched.
 - Drag-and-drop reorder with **multi-select** (Ctrl/Shift-click, then drag the group).
 - Move selected items to the top, up, down, to the bottom, or to a numbered position.
 - Sort the whole list, or only the selected rows: title, year, release date, show → season → episode, date added, length, unwatched first, reverse, shuffle.

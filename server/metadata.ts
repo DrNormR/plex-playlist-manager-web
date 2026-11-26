@@ -226,4 +226,64 @@ export function registerMetadataRoutes(router: Router, pms: (res: Response) => P
     await pms(res).put(`/library/metadata/${rkParam(req.params.rk)}/refresh`, { force: 1 });
     res.json({ ok: true });
   });
+
+  /** Mark items watched/unwatched for this account. Shows and seasons mark all their episodes. */
+  router.post('/watched', async (req, res) => {
+    const p = pms(res);
+    const keys: string[] = Array.isArray(req.body?.ratingKeys) ? req.body.ratingKeys.map(rkParam) : [];
+    if (!keys.length) throw new PlexError(400, 'Nothing selected');
+    const action = req.body?.watched ? 'scrobble' : 'unscrobble';
+    for (const key of keys) await p.get(`/:/${action}`, { identifier: 'com.plexapp.plugins.library', key });
+    res.json({ ok: true, count: keys.length });
+  });
+
+  /**
+   * For shows/seasons (and artists/albums): the episode or track to add instead of the whole thing.
+   * which=first → first regular episode (specials/season 0 skipped when possible);
+   * which=next → first unwatched episode for this account (falls back to the first).
+   * Other item types map to themselves.
+   */
+  router.post('/items/episodes', async (req, res) => {
+    const p = pms(res);
+    const which = req.body?.which === 'next' ? 'next' : 'first';
+    const items: { ratingKey: string; type: string }[] = Array.isArray(req.body?.items) ? req.body.items : [];
+    const out: Record<string, { ratingKey: string; title: string } | null> = {};
+    for (const it of items.slice(0, 500)) {
+      const rk = rkParam(it.ratingKey);
+      if (!['show', 'season', 'artist', 'album'].includes(it.type)) {
+        out[rk] = { ratingKey: rk, title: '' };
+        continue;
+      }
+      out[rk] = await pickLeaf(p, rk, it.type, which);
+    }
+    res.json(out);
+  });
+}
+
+const byOrder = (a: any, b: any) => (Number(a.parentIndex ?? 0) - Number(b.parentIndex ?? 0)) || (Number(a.index ?? 0) - Number(b.index ?? 0));
+
+async function pickLeaf(p: Pms, rk: string, type: string, which: 'first' | 'next') {
+  const label = (m: any) => ({
+    ratingKey: String(m.ratingKey),
+    title: m.type === 'episode' ? `S${String(m.parentIndex ?? '?').padStart(2, '0')}E${String(m.index ?? '?').padStart(2, '0')} – ${m.title}` : String(m.title ?? ''),
+  });
+
+  if (which === 'first' && (type === 'show' || type === 'artist')) {
+    // Cheap path: first real season (or album), then its first episode (or track).
+    const { items: kids } = await p.getAll(`/library/metadata/${rk}/children`);
+    const sorted = [...kids].sort((a, b) => Number(a.index ?? 0) - Number(b.index ?? 0));
+    const season = sorted.find((s) => Number(s.index ?? 0) >= 1) ?? sorted[0];
+    if (!season) return null;
+    const { items: leaves } = await p.getAll(`/library/metadata/${season.ratingKey}/children`);
+    const first = [...leaves].sort((a, b) => Number(a.index ?? 0) - Number(b.index ?? 0))[0];
+    return first ? label(first) : null;
+  }
+
+  const { items } = await p.getAll(`/library/metadata/${rk}/allLeaves`);
+  const leaves = items.filter((m: any) => m.type === 'episode' || m.type === 'track');
+  const regular = leaves.filter((m: any) => Number(m.parentIndex ?? 1) >= 1);
+  const pool = (regular.length ? regular : leaves).sort(byOrder);
+  if (!pool.length) return null;
+  const pick = which === 'next' ? (pool.find((m: any) => !m.viewCount) ?? pool[0]) : pool[0];
+  return label(pick);
 }

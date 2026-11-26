@@ -5,6 +5,7 @@ import type { Collection, IndexedPlaylist, Item, ItemDetails } from '../types';
 import { Thumb } from './Thumb';
 import { ArtworkDialog } from './ArtworkDialog';
 import { EditDialog, type EditTab } from './EditDialog';
+import { AddModeSelect, resolveForAdd, useAddMode } from './addMode';
 import { entryMatcher, isGroupType, refreshIndexedPlaylist, updatePlaylistIndex, usePlaylistIndex } from './playlistIndex';
 import { TYPE_LABEL, cmpText, fmtDuration, plural } from '../util';
 
@@ -47,6 +48,18 @@ export function TitlePanel({ item, onItemChanged, onAddedToPlaylist, onReplaced 
   const canCollect = COLLECTABLE.includes(item.type) && !!acct?.admin;
   const canEditMeta = !!acct?.admin;
   const [editTab, setEditTab] = useState<EditTab | null>(null);
+  const { notify, busy } = useApp();
+  const isWatched = isGroupType(item.type)
+    ? !!shown.leafCount && (shown.viewedLeafCount ?? 0) >= shown.leafCount
+    : !!shown.viewCount;
+  const canWatch = ['movie', 'episode', 'show', 'season', 'track', 'album', 'artist'].includes(item.type);
+  const toggleWatched = async () => {
+    const ok = await busy(isWatched ? 'Marking unwatched…' : 'Marking watched…', () => api.setWatched(acct!.id, [item.ratingKey], !isWatched));
+    if (!ok) return;
+    notify(`${shown.displayTitle}: marked ${isWatched ? 'unwatched' : 'watched'} for ${acct!.name}`, 'ok');
+    const d = await loadDetails();
+    if (d) onItemChanged?.(d);
+  };
 
   return (
     <div className="membership">
@@ -67,6 +80,11 @@ export function TitlePanel({ item, onItemChanged, onAddedToPlaylist, onReplaced 
               {canEditMeta && <button className="small-btn" onClick={() => setEditTab('general')}>Edit…</button>}
               {canEditMeta && ['movie', 'show', 'artist', 'album'].includes(item.type) && (
                 <button className="small-btn" onClick={() => setEditTab('match')}>Match…</button>
+              )}
+              {canWatch && (
+                <button className="small-btn" onClick={toggleWatched} title={`For ${acct!.name}`}>
+                  {isWatched ? 'Mark unwatched' : 'Mark watched'}
+                </button>
               )}
               <button className="small-btn" onClick={() => setEditTab('info')}>Info</button>
               <button className="small-btn" onClick={() => setArtOpen(true)}>Artwork…</button>
@@ -137,6 +155,7 @@ function PlaylistChecks({ item, onAdded }: { item: Item; onAdded?: (acctId: stri
   const [pending, setPending] = useState<Set<string>>(new Set());
   const matches = useMemo(() => entryMatcher(item), [item]);
   const group = isGroupType(item.type);
+  const [mode, setMode] = useAddMode();
 
   const rows = useMemo(() => {
     const f = filter.trim().toLowerCase();
@@ -155,9 +174,12 @@ function PlaylistChecks({ item, onAdded }: { item: Item; onAdded?: (acctId: stri
         updatePlaylistIndex(acctId, (ix) => ix.map((x) => (x.ratingKey === p.ratingKey ? { ...x, entries: x.entries.filter((e) => !hits.includes(e)) } : x)));
         notify(`Removed from “${p.title}”`, 'ok');
       } else {
-        await api.addToPlaylist(acctId, p.ratingKey, [item.ratingKey]);
+        const { keys } = await resolveForAdd(acctId, [item], mode);
+        if (!keys.length) throw new Error('This has no episodes to add yet.');
+        await api.addToPlaylist(acctId, p.ratingKey, keys);
         await refreshIndexedPlaylist(acctId, p.ratingKey);
-        notify(`Added to “${p.title}”`, 'ok');
+        const what = group ? (mode === 'first' ? 'First episode added' : mode === 'next' ? 'Next unwatched episode added' : 'Added') : 'Added';
+        notify(`${what} to “${p.title}”`, 'ok');
         onAdded?.(acctId, p);
       }
     } catch (e) {
@@ -187,6 +209,11 @@ function PlaylistChecks({ item, onAdded }: { item: Item; onAdded?: (acctId: stri
           <input type="checkbox" checked={onlyIn} onChange={(e) => setOnlyIn(e.target.checked)} /> only ones it's in
         </label>
       </div>
+      {group && (
+        <div className="row-tools">
+          <AddModeSelect mode={mode} onChange={setMode} />
+        </div>
+      )}
       {index && <div className="small pad-x muted">In {plural(inCount, 'playlist')}</div>}
       {error && <div className="banner error">{error}</div>}
       {!index && !error && <div className="muted pad">Scanning playlists… (the first time can take a moment if you have lots)</div>}

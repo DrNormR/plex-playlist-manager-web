@@ -61,7 +61,7 @@ const subscribe = (l: () => void) => {
 const getVersion = () => version;
 
 export function usePlaylistIndex(acct: string | undefined, enabled = true) {
-  useSyncExternalStore(subscribe, getVersion);
+  const ver = useSyncExternalStore(subscribe, getVersion);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -83,9 +83,10 @@ export function usePlaylistIndex(acct: string | undefined, enabled = true) {
     [acct],
   );
 
+  // Load on mount, and again whenever the cached index is invalidated elsewhere.
   useEffect(() => {
-    if (enabled) load();
-  }, [enabled, load]);
+    if (enabled && acct && !cache.has(acct)) load();
+  }, [enabled, load, acct, ver]);
 
   return { index: acct ? (cache.get(acct) ?? null) : null, error, loading, reload: () => load(true) };
 }

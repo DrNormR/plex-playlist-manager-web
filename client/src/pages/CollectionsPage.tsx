@@ -221,8 +221,7 @@ export function CollectionsPage() {
         <TargetPicker
           kind="playlist"
           switchable
-          ratingKeys={dialog.copy.map((i) => i.ratingKey)}
-          itemType={dialog.copy[0]?.type ?? 'movie'}
+          items={dialog.copy}
           onClose={() => setDialog(null)}
           onDone={() => loadLists()}
         />

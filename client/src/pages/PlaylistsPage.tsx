@@ -208,8 +208,7 @@ export function PlaylistsPage() {
         <TargetPicker
           kind="playlist"
           switchable
-          ratingKeys={dialog.items.map((i) => i.ratingKey)}
-          itemType={dialog.items[0]?.type ?? 'movie'}
+          items={dialog.items}
           onClose={() => setDialog(null)}
           onDone={(a) => a === acctId && loadLists()}
         />
@@ -281,32 +280,98 @@ function CopyPlaylistsDialog({ playlists, onClose, onDone }: { playlists: Playli
   const others = accounts.filter((a) => a.id !== acct!.id);
   const [target, setTarget] = useState(others[0]?.id ?? acct!.id);
   const single = playlists.length === 1;
+  const [into, setInto] = useState<'new' | 'existing'>('new');
   const [title, setTitle] = useState(single ? playlists[0].title : '');
   const [suffix, setSuffix] = useState('');
+  const [targetLists, setTargetLists] = useState<Playlist[] | null>(null);
+  const [existingId, setExistingId] = useState('');
+  const [skipDupes, setSkipDupes] = useState(true);
   const sameAcct = target === acct!.id;
+  const targetName = accounts.find((a) => a.id === target)?.name ?? 'that account';
+  const playlistKey = playlists.map((p) => p.ratingKey).join(',');
+
+  useEffect(() => {
+    setTargetLists(null);
+    setExistingId('');
+    api.playlists(target).then(
+      (l) => {
+        const regular = l.filter((p) => !p.smart).sort((a, b) => cmpText(a.title, b.title));
+        setTargetLists(regular);
+        // Pre-select a playlist with the same name, if the other profile has one.
+        if (single) setExistingId(regular.find((p) => p.title === playlists[0].title && !(sameAcct && p.ratingKey === playlists[0].ratingKey))?.ratingKey ?? '');
+      },
+      () => setTargetLists([]),
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [target, playlistKey]);
 
   const run = async () => {
-    const res = await busy(`Copying ${plural(playlists.length, 'playlist')}…`, async () => {
-      let done = 0;
+    const res = await busy(`Copying ${plural(playlists.length, 'playlist')} to ${targetName}…`, async () => {
+      let created = 0;
+      let merged = 0;
+      let added = 0;
+      let notAdded = 0;
+      let dupes = 0;
       const skipped: string[] = [];
       for (const pl of playlists) {
         const { items } = await api.playlist(acct!.id, pl.ratingKey);
-        if (!items.length) {
+        let keys = items.map((i) => i.ratingKey);
+        if (!keys.length) {
           skipped.push(pl.title);
           continue;
         }
-        const name = single ? title.trim() : `${pl.title}${suffix}`;
-        await api.createPlaylist(target, name, items.map((i) => i.ratingKey), items[0].type);
-        done++;
+        const destId =
+          into === 'existing'
+            ? single
+              ? existingId
+              : targetLists?.find((t) => t.title === pl.title && !(sameAcct && t.ratingKey === pl.ratingKey))?.ratingKey
+            : undefined;
+
+        if (destId) {
+          const before = await api.playlist(target, destId);
+          if (skipDupes) {
+            const have = new Set(before.items.map((i) => i.ratingKey));
+            const seen = new Set<string>();
+            const fresh = keys.filter((k) => !have.has(k) && !seen.has(k) && (seen.add(k), true));
+            dupes += keys.length - fresh.length;
+            keys = fresh;
+          }
+          if (keys.length) await api.addToPlaylist(target, destId, keys);
+          const after = await api.playlist(target, destId);
+          const got = after.items.length - before.items.length;
+          added += got;
+          notAdded += Math.max(0, keys.length - got);
+          merged++;
+        } else {
+          const name = single ? title.trim() : `${pl.title}${suffix}`;
+          const made = await api.createPlaylist(target, name, keys, items[0].type);
+          const after = await api.playlist(target, made.ratingKey);
+          added += after.items.length;
+          notAdded += Math.max(0, keys.length - after.items.length);
+          created++;
+        }
       }
-      return { done, skipped };
+      return { created, merged, added, notAdded, dupes, skipped };
     });
     if (!res) return;
-    const who = accounts.find((a) => a.id === target)?.name;
-    notify(`Copied ${plural(res.done, 'playlist')} to ${who}${res.skipped.length ? ` (skipped empty: ${res.skipped.join(', ')})` : ''}`, 'ok');
+    const parts = [
+      res.created && `created ${plural(res.created, 'playlist')}`,
+      res.merged && `added into ${plural(res.merged, 'existing playlist')}`,
+    ].filter(Boolean);
+    notify(
+      `${targetName}: ${parts.join(' and ')} · ${plural(res.added, 'item')} added` +
+        (res.dupes ? ` · ${res.dupes} already there, skipped` : '') +
+        (res.skipped.length ? ` · skipped empty: ${res.skipped.join(', ')}` : ''),
+      'ok',
+    );
+    if (res.notAdded) {
+      notify(`${plural(res.notAdded, 'item')} could not be added. ${targetName} may not have access to the library they're in.`, 'error');
+    }
     onDone(target);
     onClose();
   };
+
+  const canRun = into === 'new' ? (single ? !!title.trim() : true) : single ? !!existingId : true;
 
   return (
     <Modal
@@ -315,7 +380,7 @@ function CopyPlaylistsDialog({ playlists, onClose, onDone }: { playlists: Playli
       footer={
         <>
           <button onClick={onClose}>Cancel</button>
-          <button className="primary" onClick={run} disabled={single ? !title.trim() : false}>Copy</button>
+          <button className="primary" onClick={run} disabled={!canRun}>Copy to {targetName}</button>
         </>
       }
     >
@@ -328,21 +393,51 @@ function CopyPlaylistsDialog({ playlists, onClose, onDone }: { playlists: Playli
             ))}
           </select>
         </label>
-        {single ? (
+      </div>
+      <div className="seg">
+        <button className={into === 'new' ? 'on' : ''} onClick={() => setInto('new')}>As a new playlist</button>
+        <button className={into === 'existing' ? 'on' : ''} onClick={() => setInto('existing')}>Into an existing playlist</button>
+      </div>
+      <div className="form-grid">
+        {into === 'new' && single && (
           <label>
-            New name
+            Name
             <input value={title} onChange={(e) => setTitle(e.target.value)} />
           </label>
-        ) : (
+        )}
+        {into === 'new' && !single && (
           <label>
             Add to names (optional)
             <input value={suffix} onChange={(e) => setSuffix(e.target.value)} placeholder={sameAcct ? ' (copy)' : ''} />
           </label>
         )}
+        {into === 'existing' && single && (
+          <label>
+            {targetName}'s playlist
+            <select value={existingId} onChange={(e) => setExistingId(e.target.value)} disabled={!targetLists}>
+              <option value="">{targetLists ? 'Choose a playlist…' : 'Loading…'}</option>
+              {targetLists
+                ?.filter((p) => !(sameAcct && p.ratingKey === playlists[0].ratingKey))
+                .map((p) => (
+                  <option key={p.ratingKey} value={p.ratingKey}>{p.title} ({p.leafCount})</option>
+                ))}
+            </select>
+          </label>
+        )}
+        {into === 'existing' && (
+          <label className="check-row">
+            <span>
+              <input type="checkbox" checked={skipDupes} onChange={(e) => setSkipDupes(e.target.checked)} /> Skip titles already in the playlist
+            </span>
+          </label>
+        )}
       </div>
       <p className="muted small">
+        {into === 'existing' && !single
+          ? `Each playlist is added into ${targetName}'s playlist with the same name; any without a match are created new. `
+          : ''}
         Copies keep the item order. Smart playlists are copied as regular playlists holding their current items.
-        {sameAcct && single && title.trim() === playlists[0].title ? ' The copy will have the same name as the original.' : ''}
+        {into === 'new' && sameAcct && single && title.trim() === playlists[0].title ? ' The copy will have the same name as the original.' : ''}
       </p>
     </Modal>
   );

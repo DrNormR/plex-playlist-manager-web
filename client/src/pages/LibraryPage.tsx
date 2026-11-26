@@ -5,6 +5,7 @@ import type { Item, Library } from '../types';
 import { Thumb } from '../components/Thumb';
 import { TitlePanel } from '../components/TitlePanel';
 import { TargetPicker } from '../components/TargetPicker';
+import { AddModeSelect, hasGroups, resolveForAdd, useAddMode } from '../components/addMode';
 import { invalidatePlaylistIndex, isGroupType, keysInPlaylists, refreshIndexedPlaylist, usePlaylistIndex } from '../components/playlistIndex';
 import { TYPE_LABEL, cmpText, fmtDuration, plural } from '../util';
 
@@ -37,7 +38,7 @@ interface QuickTarget {
 }
 
 export function LibraryPage() {
-  const { acct, notify } = useApp();
+  const { acct, notify, busy } = useApp();
   const acctId = acct!.id;
   const [libs, setLibs] = useState<Library[] | null>(null);
   const [libError, setLibError] = useState('');
@@ -197,15 +198,31 @@ export function LibraryPage() {
     localStorage.setItem(`ppm.quick.${acctId}`, JSON.stringify(t));
   };
 
+  const [addMode, setAddMode] = useAddMode();
   const quickAdd = async (i: Item) => {
     if (!quick) return;
     try {
-      await api.addToPlaylist(acctId, quick.ratingKey, [i.ratingKey]);
-      notify(`Added “${i.displayTitle}” to “${quick.title}”`, 'ok');
+      const { keys } = await resolveForAdd(acctId, [i], addMode);
+      if (!keys.length) throw new Error(`“${i.displayTitle}” has no episodes to add yet.`);
+      await api.addToPlaylist(acctId, quick.ratingKey, keys);
+      const what = hasGroups([i]) && addMode !== 'all' ? `${addMode === 'first' ? 'First' : 'Next unwatched'} episode of “${i.displayTitle}”` : `“${i.displayTitle}”`;
+      notify(`Added ${what} to “${quick.title}”`, 'ok');
       refreshIndexedPlaylist(acctId, quick.ratingKey).catch(() => {});
     } catch (e) {
       notify(errMsg(e), 'error');
     }
+  };
+
+  const markWatched = async (watched: boolean) => {
+    const list = [...picked.values()].filter((i) => i.type !== 'collection');
+    const ok = await busy(watched ? 'Marking watched…' : 'Marking unwatched…', () => api.setWatched(acctId, list.map((i) => i.ratingKey), watched));
+    if (!ok) return;
+    const keys = new Set(list.map((i) => i.ratingKey));
+    const patch = (l: Item[]) =>
+      l.map((x) => (keys.has(x.ratingKey) ? { ...x, viewCount: watched ? 1 : 0, viewedLeafCount: watched ? x.leafCount : 0 } : x));
+    setItems(patch);
+    setChildren((c) => (c ? patch(c) : c));
+    notify(`Marked ${plural(list.length, 'title')} ${watched ? 'watched' : 'unwatched'} for ${acct!.name}`, 'ok');
   };
 
   const setF = (patch: Partial<Filters>) => setFilters((f) => ({ ...f, ...patch }));
@@ -316,7 +333,14 @@ export function LibraryPage() {
           <button className="primary" disabled={!picked.size} onClick={() => setAdding([...picked.values()])}>
             Add {picked.size || ''} to playlist / collection…
           </button>
+          {picked.size > 0 && (
+            <>
+              <button onClick={() => markWatched(true)} title={`For ${acct!.name}`}>Mark watched</button>
+              <button onClick={() => markWatched(false)} title={`For ${acct!.name}`}>Mark unwatched</button>
+            </>
+          )}
           <span className="spacer" />
+          {(lib?.type === 'show' || lib?.type === 'artist') && <AddModeSelect mode={addMode} onChange={setAddMode} />}
           <label className="small nowrap quick">
             Quick add to
             <select
@@ -374,7 +398,7 @@ export function LibraryPage() {
               setFocus(fresh);
             }}
             onItemChanged={(fresh) => {
-              const patch = (l: Item[]) => l.map((x) => (x.ratingKey === fresh.ratingKey ? { ...x, title: fresh.title, displayTitle: fresh.displayTitle, year: fresh.year, thumb: fresh.thumb, art: fresh.art } : x));
+              const patch = (l: Item[]) => l.map((x) => (x.ratingKey === fresh.ratingKey ? { ...x, title: fresh.title, displayTitle: fresh.displayTitle, year: fresh.year, thumb: fresh.thumb, art: fresh.art, viewCount: fresh.viewCount, viewedLeafCount: fresh.viewedLeafCount } : x));
               setItems(patch);
               setChildren((c) => (c ? patch(c) : c));
               setTrail(patch);
@@ -391,8 +415,7 @@ export function LibraryPage() {
         <TargetPicker
           kind="playlist"
           switchable
-          ratingKeys={adding.map((i) => i.ratingKey)}
-          itemType={adding[0].type}
+          items={adding}
           defaultTitle={adding.length === 1 ? adding[0].title : ''}
           onClose={() => setAdding(null)}
           onDone={(a) => {
