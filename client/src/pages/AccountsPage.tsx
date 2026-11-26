@@ -109,7 +109,7 @@ export function AccountsPage({ onSelect }: { onSelect: (id: string) => void }) {
       <section className="card">
         <h2>Accounts</h2>
         <p className="muted small">
-          Each account has its own playlists. Sign in with Plex, then add the other Plex Home profiles from that account. The account that owns the server is marked <strong>server admin</strong>; only it can edit metadata, artwork and collections.
+          Each account has its own playlists. Sign in with Plex, then add the other Plex Home profiles from that account. The account that owns the server is marked <strong>server admin</strong>; metadata, artwork and collections are always changed through it, whichever profile is selected.
         </p>
         <div className="acct-list">
           {accounts.map((a) => (

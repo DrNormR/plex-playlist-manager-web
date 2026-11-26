@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { api, errMsg } from '../api';
-import { useApp } from '../ctx';
+import { useApp, useCanManageLibrary } from '../ctx';
 import type { FullItem, MatchResult } from '../types';
 import { Modal } from './Modal';
 import { Thumb } from './Thumb';
@@ -53,7 +53,7 @@ export function EditDialog({ acctId, ratingKey: initialRk, title, type, initialT
 }) {
   const [ratingKey, setRatingKey] = useState(initialRk);
   const { acct, notify, busy } = useApp();
-  const canEdit = !!acct?.admin;
+  const canEdit = useCanManageLibrary();
   const [tab, setTab] = useState<EditTab>(canEdit ? initialTab : 'info');
   const [full, setFull] = useState<FullItem | null>(null);
   const [error, setError] = useState('');
@@ -172,7 +172,7 @@ export function EditDialog({ acctId, ratingKey: initialRk, title, type, initialT
           <button key={t.id} className={tab === t.id ? 'on' : ''} onClick={() => setTab(t.id)}>{t.label}</button>
         ))}
       </div>
-      {!canEdit && <div className="banner">Editing needs the server admin account. Switch accounts in the top bar to make changes.</div>}
+      {!canEdit && <div className="banner">Editing needs the server admin account. Add it on the Accounts page to make changes.</div>}
       {error && <div className="banner error">{/40[13]/.test(error) ? `Plex refused: this account can't see or change this item. (${error})` : error}</div>}
       {!full && !error && <div className="muted">Loading…</div>}
 

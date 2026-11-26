@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { api, errMsg } from '../api';
-import { useApp } from '../ctx';
+import { useApp, useCanManageLibrary } from '../ctx';
 import type { Collection, IndexedPlaylist, Item, ItemDetails } from '../types';
 import { Thumb } from './Thumb';
 import { ArtworkDialog } from './ArtworkDialog';
@@ -45,8 +45,9 @@ export function TitlePanel({ item, onItemChanged, onAddedToPlaylist, onReplaced 
 
   const shown = details ?? item;
   const square = ['track', 'album', 'artist'].includes(item.type);
-  const canCollect = COLLECTABLE.includes(item.type) && !!acct?.admin;
-  const canEditMeta = !!acct?.admin;
+  const canManage = useCanManageLibrary();
+  const canCollect = COLLECTABLE.includes(item.type) && canManage;
+  const canEditMeta = canManage;
   const [editTab, setEditTab] = useState<EditTab | null>(null);
   const { notify, busy } = useApp();
   const isWatched = isGroupType(item.type)

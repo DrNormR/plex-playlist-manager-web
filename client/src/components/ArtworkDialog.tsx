@@ -133,7 +133,7 @@ export function ArtworkDialog({ acctId, ratingKey, title, itemType, onClose, onC
       />
 
       <h3>{options?.length ? 'Or pick one Plex already has' : 'Available artwork'}</h3>
-      {error && <div className="banner error">{/40[13]/.test(error) ? `This account can't change this artwork. Use the server admin account. (${error})` : error}</div>}
+      {error && <div className="banner error">{/40[13]/.test(error) ? `Plex refused this change, even as the server admin account. (${error})` : error}</div>}
       {!options && !error && <div className="muted">Loading…</div>}
       {options && !options.length && !error && <div className="muted small">Plex has no alternatives for this yet.</div>}
       <div className={`art-grid ${wide ? 'wide' : square ? 'square' : ''}`}>

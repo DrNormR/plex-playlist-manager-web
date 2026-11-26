@@ -15,3 +15,12 @@ export interface AppContext {
 
 export const Ctx = createContext<AppContext>(null as unknown as AppContext);
 export const useApp = () => useContext(Ctx);
+
+/**
+ * Metadata, artwork and collections are changed through the server admin account (the server
+ * does that), so any profile can manage them as long as an admin account has been added.
+ */
+export function useCanManageLibrary() {
+  const { acct, accounts } = useApp();
+  return !!acct?.admin || accounts.some((a) => a.admin);
+}

@@ -142,14 +142,18 @@ export function buildEditParams(
   return params;
 }
 
-export function registerMetadataRoutes(router: Router, pms: (res: Response) => Pms) {
+/**
+ * `pms` is the selected account (watched state, "next unwatched"); `libPms` is the server admin,
+ * used for library-wide changes: editing, matching, refreshing.
+ */
+export function registerMetadataRoutes(router: Router, pms: (res: Response) => Pms, libPms: (res: Response) => Pms) {
   router.get('/items/:rk/full', async (req, res) => {
-    const { m, sectionId } = await rawMeta(pms(res), rkParam(req.params.rk));
+    const { m, sectionId } = await rawMeta(libPms(res), rkParam(req.params.rk));
     res.json(fullDetails(m, sectionId));
   });
 
   router.put('/items/:rk/edit', async (req, res) => {
-    const p = pms(res);
+    const p = libPms(res);
     const rk = rkParam(req.params.rk);
     const { m, sectionId } = await rawMeta(p, rk);
     const type = TYPE_NUM[m.type];
@@ -166,7 +170,7 @@ export function registerMetadataRoutes(router: Router, pms: (res: Response) => P
   router.get('/libraries/:sec/tags/:field', async (req, res) => {
     const field = String(req.params.field);
     if (!TAG_FIELDS[field]) throw new PlexError(400, 'Unknown tag field');
-    const p = pms(res);
+    const p = libPms(res);
     const type = req.query.type && TYPE_NUM[String(req.query.type)] ? TYPE_NUM[String(req.query.type)] : undefined;
     try {
       const j = await p.get(`/library/sections/${req.params.sec}/${field}`, { type });
@@ -181,7 +185,7 @@ export function registerMetadataRoutes(router: Router, pms: (res: Response) => P
     const rk = rkParam(req.params.rk);
     const title = String(req.query.title ?? '').trim();
     const year = String(req.query.year ?? '').trim();
-    const j = await pms(res).get(`/library/metadata/${rk}/matches`, {
+    const j = await libPms(res).get(`/library/metadata/${rk}/matches`, {
       manual: 1,
       title: title || undefined,
       year: /^\d{4}$/.test(year) ? year : undefined,
@@ -200,7 +204,7 @@ export function registerMetadataRoutes(router: Router, pms: (res: Response) => P
   });
 
   router.post('/items/:rk/match', async (req, res) => {
-    const p = pms(res);
+    const p = libPms(res);
     const rk = rkParam(req.params.rk);
     const guid = String(req.body?.guid ?? '');
     if (!guid) throw new PlexError(400, 'Pick a match');
@@ -233,12 +237,12 @@ export function registerMetadataRoutes(router: Router, pms: (res: Response) => P
   });
 
   router.post('/items/:rk/unmatch', async (req, res) => {
-    await pms(res).put(`/library/metadata/${rkParam(req.params.rk)}/unmatch`);
+    await libPms(res).put(`/library/metadata/${rkParam(req.params.rk)}/unmatch`);
     res.json({ ok: true });
   });
 
   router.post('/items/:rk/refresh', async (req, res) => {
-    await pms(res).put(`/library/metadata/${rkParam(req.params.rk)}/refresh`, { force: 1 });
+    await libPms(res).put(`/library/metadata/${rkParam(req.params.rk)}/refresh`, { force: 1 });
     res.json({ ok: true });
   });
 

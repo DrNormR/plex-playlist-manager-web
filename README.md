@@ -99,6 +99,6 @@ Environment variables: `PLEX_URL`, `APP_PASSWORD`, `PORT` (default 8080), `DATA_
 
 ## Notes
 
-- Plex playlists belong to an account. Collections belong to the library, so only the server admin can edit them.
+- Plex playlists and watched status belong to each profile. Metadata, artwork and collections belong to the library, and Plex only lets the server admin change them, so the app makes those changes with the admin account whichever profile is selected (the admin account must be added on the Accounts page).
 - Smart playlists and smart collections are read-only here, because Plex builds them from rules. You can still copy items out of them.
 - The app talks to Plex from the server, so tokens never reach the browser. Artwork is proxied for the same reason.

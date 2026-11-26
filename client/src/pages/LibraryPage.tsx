@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { api, errMsg } from '../api';
-import { useApp } from '../ctx';
+import { useApp, useCanManageLibrary } from '../ctx';
 import type { Item, Library } from '../types';
 import { Thumb } from '../components/Thumb';
 import { TitlePanel } from '../components/TitlePanel';
@@ -40,6 +40,7 @@ interface QuickTarget {
 
 export function LibraryPage() {
   const { acct, notify, busy } = useApp();
+  const canManage = useCanManageLibrary();
   const acctId = acct!.id;
   const [libs, setLibs] = useState<Library[] | null>(null);
   const [libError, setLibError] = useState('');
@@ -304,7 +305,7 @@ export function LibraryPage() {
             <button className="link" onClick={() => (setFilters({ ...NO_FILTERS, sort: filters.sort, dir: filters.dir }), setQInput(''))}>Clear filters</button>
           )}
           <span className="spacer" />
-          {acct!.admin && !trail.length && (lib?.type === 'movie' || lib?.type === 'show') && (
+          {canManage && !trail.length && (lib?.type === 'movie' || lib?.type === 'show') && (
             <button onClick={() => setDatesOpen(true)} title="Set year and release date from each file name (for sports libraries)">
               📅 Dates from file names…
             </button>

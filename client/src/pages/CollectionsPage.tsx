@@ -49,7 +49,7 @@ export function CollectionsPage() {
     } catch (e) {
       setError(
         e instanceof ApiError && e.code === 'PLEX_AUTH'
-          ? `${acct!.name} isn't allowed to manage collections. Collections belong to the library, so switch to the server admin account.`
+          ? `${acct!.name} isn't allowed to manage collections. Collections belong to the library, so add the server admin account on the Accounts page.`
           : errMsg(e),
       );
       setLists([]);

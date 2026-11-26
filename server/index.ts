@@ -231,10 +231,27 @@ app.use('/api/a/:acct', (req, res, next) => {
   const a = findAccount(String(req.params.acct));
   if (!cfg.serverUrl) throw new PlexError(400, 'Set the Plex server URL first (Accounts page).');
   res.locals.pms = new Pms(cfg.serverUrl, a.serverToken);
+  // Metadata, artwork and collections belong to the library, not the profile, and only the
+  // account that owns the server may change them. Use that account for those, whichever
+  // profile is selected.
+  const admin = a.serverOwner ? a : cfg.accounts.find((x) => x.serverOwner);
+  res.locals.libPms = admin && admin !== a ? new Pms(cfg.serverUrl, admin.serverToken) : res.locals.pms;
   next();
 }, acctRouter);
 
 const pms = (res: Response): Pms => res.locals.pms;
+/** The server admin's connection, for library-wide changes (see above). */
+const libPms = (res: Response): Pms => res.locals.libPms;
+
+/** Try with the selected account; if Plex refuses, retry as the server admin (e.g. a title's artwork). */
+async function asOwnerIfNeeded<T>(res: Response, fn: (p: Pms) => Promise<T>): Promise<T> {
+  try {
+    return await fn(pms(res));
+  } catch (e) {
+    if (e instanceof PlexError && (e.status === 401 || e.status === 403) && libPms(res) !== pms(res)) return fn(libPms(res));
+    throw e;
+  }
+}
 const keys = (v: unknown): string[] => (Array.isArray(v) ? v.map(String).filter(Boolean) : []);
 
 async function inChunks(ids: string[], size: number, fn: (chunk: string[]) => Promise<unknown>) {
@@ -364,12 +381,12 @@ acctRouter.get('/libraries', async (_req, res) => {
 });
 
 acctRouter.get('/libraries/:sec/collections', async (req, res) => {
-  const { items } = await pms(res).getAll(`/library/sections/${req.params.sec}/collections`);
+  const { items } = await libPms(res).getAll(`/library/sections/${req.params.sec}/collections`);
   res.json(items.map(normCollection));
 });
 
 acctRouter.get('/collections/:id', async (req, res) => {
-  const p = pms(res);
+  const p = libPms(res);
   const [meta, { items }] = await Promise.all([
     p.get(`/library/metadata/${req.params.id}`),
     p.getAll(`/library/collections/${req.params.id}/children`),
@@ -380,7 +397,7 @@ acctRouter.get('/collections/:id', async (req, res) => {
 });
 
 acctRouter.post('/collections', async (req, res) => {
-  const p = pms(res);
+  const p = libPms(res);
   const title = String(req.body?.title ?? '').trim();
   const sectionId = String(req.body?.sectionId ?? '');
   const ratingKeys = keys(req.body?.ratingKeys);
@@ -395,7 +412,7 @@ acctRouter.post('/collections', async (req, res) => {
 });
 
 acctRouter.put('/collections/:id', async (req, res) => {
-  const p = pms(res);
+  const p = libPms(res);
   const title = String(req.body?.title ?? '').trim();
   if (!title) throw new PlexError(400, 'Title is required');
   const meta = await p.get(`/library/metadata/${req.params.id}`);
@@ -405,19 +422,19 @@ acctRouter.put('/collections/:id', async (req, res) => {
 });
 
 acctRouter.delete('/collections/:id', async (req, res) => {
-  await pms(res).del(`/library/collections/${req.params.id}`);
+  await libPms(res).del(`/library/collections/${req.params.id}`);
   res.json({ ok: true });
 });
 
 acctRouter.post('/collections/:id/items', async (req, res) => {
-  const p = pms(res);
+  const p = libPms(res);
   const ratingKeys = keys(req.body?.ratingKeys);
   await inChunks(ratingKeys, 100, async (c) => p.put(`/library/collections/${req.params.id}/items`, { uri: await p.libraryUri(c) }));
   res.json({ ok: true, added: ratingKeys.length });
 });
 
 acctRouter.post('/collections/:id/apply', async (req, res) => {
-  const p = pms(res);
+  const p = libPms(res);
   const id = req.params.id;
   const remove = new Set(keys(req.body?.remove));
   const order = keys(req.body?.order);
@@ -527,8 +544,8 @@ acctRouter.get('/items/:rk/children', async (req, res) => {
   res.json(items.map(normItem));
 });
 
-registerMetadataRoutes(acctRouter, pms);
-registerDateRoutes(acctRouter, pms);
+registerMetadataRoutes(acctRouter, pms, libPms);
+registerDateRoutes(acctRouter, libPms);
 
 // --- artwork (posters/thumbnails and background art) for titles, collections and playlists
 
@@ -561,7 +578,7 @@ acctRouter.post('/art/:rk/:kind/select', async (req, res) => {
   const kind = artKind(req.params.kind);
   const url = String(req.body?.url ?? '');
   if (!url) throw new PlexError(400, 'Missing artwork key');
-  await pms(res).put(`/library/metadata/${rk}/${kind}`, { url });
+  await asOwnerIfNeeded(res, (p) => p.put(`/library/metadata/${rk}/${kind}`, { url }));
   res.json({ ok: true });
 });
 
@@ -569,7 +586,8 @@ acctRouter.post('/art/:rk/:kind/url', async (req, res) => {
   const rk = rkParam(req.params.rk);
   const url = String(req.body?.url ?? '').trim();
   if (!/^https?:\/\/\S+$/i.test(url)) throw new PlexError(400, 'Enter an http(s) image URL');
-  await pms(res).post(listPath(rk, artKind(req.params.kind)), { url });
+  const kind = artKind(req.params.kind);
+  await asOwnerIfNeeded(res, (p) => p.post(listPath(rk, kind), { url }));
   res.json({ ok: true });
 });
 
@@ -584,7 +602,7 @@ acctRouter.post(
     if (!IMAGE_TYPES.includes(type) || !Buffer.isBuffer(req.body) || !req.body.length) {
       throw new PlexError(400, 'Upload a JPEG, PNG or WebP image (max 20 MB)');
     }
-    await pms(res).upload(listPath(rk, kind), req.body, type);
+    await asOwnerIfNeeded(res, (p) => p.upload(listPath(rk, kind), req.body, type));
     res.json({ ok: true });
   },
 );
@@ -627,7 +645,8 @@ app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
 
 startAutoDates(
   (id) => {
-    const a = cfg.accounts.find((x) => x.id === id);
+    const own = cfg.accounts.find((x) => x.id === id);
+    const a = own?.serverOwner ? own : (cfg.accounts.find((x) => x.serverOwner) ?? own);
     return a && cfg.serverUrl ? new Pms(cfg.serverUrl, a.serverToken) : undefined;
   },
   Number(process.env.AUTO_DATES_MINUTES) || 30,
