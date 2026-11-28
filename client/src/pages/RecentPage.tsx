@@ -30,6 +30,8 @@ interface Card {
   progress?: number;
   square?: boolean;
   wide?: boolean;
+  /** Removed from the library: nothing to open. */
+  gone?: boolean;
 }
 
 function itemSub(i: Item) {
@@ -87,7 +89,7 @@ function Strip({ acct, cards, focused, onFocus, empty }: { acct: string; cards: 
   return (
     <div className="strip">
       {cards.map((c) => (
-        <button key={c.id} className={`strip-card ${focused === c.focus.ratingKey ? 'focused' : ''} ${c.square ? 'sq' : ''}`} onClick={() => onFocus(c.focus)} title={[c.title, c.sub].filter(Boolean).join(' — ')}>
+        <button key={c.id} className={`strip-card ${focused === c.focus.ratingKey ? 'focused' : ''} ${c.square ? 'sq' : ''}`} onClick={() => !c.gone && onFocus(c.focus)} disabled={c.gone} title={[c.title, c.sub, c.gone && '(removed from the library)'].filter(Boolean).join(' — ')}>
           <div className="strip-poster">
             <Thumb acct={acct} path={c.thumb} w={c.square ? 130 : 110} h={165} square={c.square} />
             {c.progress !== undefined && (
@@ -143,7 +145,7 @@ export function RecentPage() {
   const upNext = useMemo(() => (cont ?? []).filter((i) => !i.viewOffset), [cont]);
   const watchLibs = useMemo(() => [...new Set((watched ?? []).map((w) => w.library).filter(Boolean))] as string[], [watched]);
   const watchedCards = useMemo(
-    () => (watched ?? []).filter((w) => !watchLib || w.library === watchLib).map((w) => ({ ...toCard(w, timeAgo(w.viewedAt)), id: `${w.ratingKey}-${w.viewedAt}`, progress: undefined })),
+    () => (watched ?? []).filter((w) => !watchLib || w.library === watchLib).map((w) => ({ ...toCard(w, w.deleted ? `${timeAgo(w.viewedAt)} · removed` : timeAgo(w.viewedAt)), id: `${w.ratingKey}-${w.viewedAt}`, progress: undefined, gone: w.deleted })),
     [watched, watchLib],
   );
 

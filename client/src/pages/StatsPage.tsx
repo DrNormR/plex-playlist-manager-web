@@ -350,15 +350,15 @@ export function StatsPage() {
                     {topRows.map((r, n) => (
                       <tr
                         key={r.t.key}
-                        className={focus?.ratingKey === r.t.key ? 'focused' : ''}
-                        onClick={() => setFocus({ ratingKey: r.t.key, type: r.t.type, title: r.t.title, displayTitle: r.t.title, thumb: r.t.thumb })}
+                        className={`${focus?.ratingKey === r.t.key ? 'focused' : ''} ${r.t.key.startsWith('name:') ? 'gone' : ''}`}
+                        onClick={() => !r.t.key.startsWith('name:') && setFocus({ ratingKey: r.t.key, type: r.t.type, title: r.t.title, displayTitle: r.t.title, thumb: r.t.thumb })}
                       >
                         <td className="muted">{n + 1}</td>
                         <td><Thumb acct={acctId} path={r.t.thumb} w={30} h={45} square={r.t.type === 'artist'} /></td>
                         <td className="grow">
                           <div className="ellipsis">{r.t.title}</div>
                           <div className="muted small">
-                            {data!.libraries[r.t.lib]?.title ?? ''}
+                            {r.t.key.startsWith('name:') ? 'removed from the library' : (data!.libraries[r.t.lib]?.title ?? '')}
                             {who === '' && r.viewers.size > 1 ? ` · ${r.viewers.size} profiles` : ''}
                           </div>
                           <div className="top-bar"><div style={{ width: `${((topBy === 'plays' ? r.plays : r.min) / topMax) * 100}%` }} /></div>
@@ -418,7 +418,7 @@ export function StatsPage() {
 
             <p className="muted small">
               Based on Plex's play history (every play counted once it's mostly watched). Watch time counts each play as the title's full length.
-              {s.estimated > 0 && ` ${s.estimated === 1 ? '1 play is' : `${s.estimated.toLocaleString()} plays are`} of titles no longer in the library, so the library's average length is used for ${s.estimated === 1 ? 'it' : 'them'}.`}
+              {s.estimated > 0 && ` ${s.estimated === 1 ? '1 play is' : `${s.estimated.toLocaleString()} plays are`} of titles no longer in the library (or since re-added), so their length is estimated from the same show's episodes or a typical length.`}
             </p>
           </div>
         )}

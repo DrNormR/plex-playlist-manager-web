@@ -150,38 +150,66 @@ async function buildStats(lib: Pms): Promise<StatsData> {
   const titles: StatsData['titles'] = [];
   const titleIndex = new Map<string, number>();
 
+  // Plays of titles that were removed (or re-added) since have no ratingKey, only names, so
+  // group by name as a fallback and merge them with the current title of the same name.
+  const nameKey = (type: string, title: string) => `${type}:${title.trim().toLowerCase()}`;
+  const byName = new Map<string, number>();
   const groupOf = (h: any) => {
-    if (h.type === 'episode' && h.grandparentKey) {
-      return { key: String(h.grandparentKey).split('/').pop()!, title: h.grandparentTitle ?? h.title, type: 'show', thumb: h.grandparentThumb ?? h.parentThumb ?? h.thumb };
+    const lastId = (k: unknown) => (k ? String(k).split('/').pop()! : undefined);
+    if (h.type === 'episode') {
+      const title = String(h.grandparentTitle ?? h.title ?? '(untitled)');
+      return { id: lastId(h.grandparentKey), title, type: 'show', thumb: h.grandparentThumb ?? h.parentThumb ?? h.thumb };
     }
-    if (h.type === 'track' && h.grandparentKey) {
-      return { key: String(h.grandparentKey).split('/').pop()!, title: h.grandparentTitle ?? h.title, type: 'artist', thumb: h.grandparentThumb ?? h.thumb };
+    if (h.type === 'track') {
+      const title = String(h.grandparentTitle ?? h.title ?? '(untitled)');
+      return { id: lastId(h.grandparentKey), title, type: 'artist', thumb: h.grandparentThumb ?? h.thumb };
     }
-    return { key: String(h.ratingKey), title: h.title ?? '(untitled)', type: String(h.type ?? 'other'), thumb: h.thumb };
+    return { id: h.ratingKey ? String(h.ratingKey) : undefined, title: String(h.title ?? '(untitled)'), type: String(h.type ?? 'other'), thumb: h.thumb };
+  };
+  const titleFor = (h: any) => {
+    const g = groupOf(h);
+    const nk = nameKey(g.type, g.title);
+    let ti = g.id ? titleIndex.get(g.id) : undefined;
+    if (ti === undefined && !g.id) ti = byName.get(nk);
+    if (ti === undefined) {
+      ti = titles.length;
+      titles.push({ key: g.id ?? `name:${nk}`, title: g.title, type: g.type, thumb: g.thumb, lib: libIndex.get(String(h.librarySectionID)) ?? -1 });
+      if (g.id) titleIndex.set(g.id, ti);
+    } else if (titles[ti].key.startsWith('name:') && g.id) {
+      // A removed copy was seen first; the current one gives the real key, poster and library.
+      titles[ti] = { key: g.id, title: g.title, type: g.type, thumb: g.thumb, lib: libIndex.get(String(h.librarySectionID)) ?? -1 };
+      titleIndex.set(g.id, ti);
+    }
+    if (!byName.has(nk) || g.id) byName.set(nk, ti);
+    return ti;
   };
 
-  // Average known length per library, used for plays of titles that were since deleted.
-  const sums = new Map<string, { t: number; n: number }>();
-  for (const h of history) {
-    const d = dur[String(h.ratingKey)];
-    if (!d) continue;
-    const s = sums.get(String(h.librarySectionID)) ?? { t: 0, n: 0 };
+  // Known lengths, averaged per title group, per item type and per library: used to estimate
+  // plays of titles that are no longer in the library.
+  type Sum = { t: number; n: number };
+  const add = (m: Map<string | number, Sum>, k: string | number, d: number) => {
+    const s = m.get(k) ?? { t: 0, n: 0 };
     s.t += d;
     s.n++;
-    sums.set(String(h.librarySectionID), s);
-  }
+    m.set(k, s);
+  };
+  const avg = (s?: Sum) => (s && s.n ? s.t / s.n : 0);
+  const byGroup = new Map<string | number, Sum>();
+  const byType = new Map<string | number, Sum>();
+  const byLib = new Map<string | number, Sum>();
+  const tis = history.map(titleFor);
+  history.forEach((h, i) => {
+    const d = h.ratingKey ? dur[String(h.ratingKey)] : 0;
+    if (!d) return;
+    add(byGroup, tis[i], d);
+    add(byType, String(h.type), d);
+    add(byLib, String(h.librarySectionID), d);
+  });
 
   let unknownDuration = 0;
   const plays: StatsData['plays'] = [];
-  for (const h of history) {
-    if (!h.viewedAt) continue;
-    const g = groupOf(h);
-    let ti = titleIndex.get(g.key);
-    if (ti === undefined) {
-      ti = titles.length;
-      titleIndex.set(g.key, ti);
-      titles.push({ ...g, lib: libIndex.get(String(h.librarySectionID)) ?? -1 });
-    }
+  history.forEach((h, i) => {
+    if (!h.viewedAt) return;
     const aid = Number(h.accountID);
     let ai = acctIndex.get(aid);
     if (ai === undefined) {
@@ -192,25 +220,23 @@ async function buildStats(lib: Pms): Promise<StatsData> {
       }
       acctIndex.set(aid, ai);
     }
-    let ms = dur[String(h.ratingKey)] ?? 0;
+    let ms = h.ratingKey ? (dur[String(h.ratingKey)] ?? 0) : 0;
     let est = 0;
     if (!ms) {
-      const s = sums.get(String(h.librarySectionID));
-      if (s?.n) {
-        ms = s.t / s.n;
-        est = 1;
-      } else unknownDuration++;
+      ms = avg(byGroup.get(tis[i])) || avg(byType.get(String(h.type))) || avg(byLib.get(String(h.librarySectionID)));
+      if (ms) est = 1;
+      else unknownDuration++;
     }
     plays.push([
       Number(h.viewedAt),
-      ti,
+      tis[i],
       ai,
       Math.round(ms / 60000),
       libIndex.get(String(h.librarySectionID)) ?? -1,
       devIndex.get(Number(h.deviceID)) ?? -1,
       est,
     ]);
-  }
+  });
   return { generatedAt: Date.now(), accounts: acctList, libraries, devices, titles, plays, unknownDuration };
 }
 
@@ -270,12 +296,14 @@ export function registerActivityRoutes(
       });
     }
     const hist: any[] = j?.MediaContainer?.Metadata ?? [];
-    const meta = await metadataFor(lib, [...new Set(hist.map((h) => String(h.ratingKey)))]);
+    const meta = await metadataFor(lib, [...new Set(hist.filter((h) => h.ratingKey).map((h) => String(h.ratingKey)))]);
     const sections = new Map((await sectionList(lib)).map((s) => [s.key, s.title]));
     res.json(
       hist.map((h) => {
-        const m = meta.get(String(h.ratingKey));
-        const base = m ? normItem(m) : normItem({ ...h, librarySectionTitle: sections.get(String(h.librarySectionID)) });
+        const m = h.ratingKey ? meta.get(String(h.ratingKey)) : undefined;
+        const base = m
+          ? normItem(m)
+          : normItem({ ...h, ratingKey: h.ratingKey ?? `gone-${String(h.historyKey ?? '').split('/').pop()}`, librarySectionTitle: sections.get(String(h.librarySectionID)) ?? 'Removed library' });
         return { ...base, viewedAt: Number(h.viewedAt), deleted: !m };
       }),
     );
