@@ -12,6 +12,7 @@ import { planMoves } from './reorder.js';
 import { registerMetadataRoutes } from './metadata.js';
 import { registerImageSearchRoutes } from './imageSearch.js';
 import { registerDateRoutes, startAutoDates } from './fileDates.js';
+import { registerActivityRoutes } from './activity.js';
 
 const PORT = Number(process.env.PORT || 8080);
 const APP_PASSWORD = process.env.APP_PASSWORD || '';
@@ -546,6 +547,7 @@ acctRouter.get('/items/:rk/children', async (req, res) => {
 
 registerMetadataRoutes(acctRouter, pms, libPms);
 registerDateRoutes(acctRouter, libPms);
+registerActivityRoutes(acctRouter, pms, libPms, (req) => findAccount(String((req.params as Record<string, string>).acct)));
 
 // --- artwork (posters/thumbnails and background art) for titles, collections and playlists
 

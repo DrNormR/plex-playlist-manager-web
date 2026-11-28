@@ -1,4 +1,4 @@
-import type { AutoDateRule, DateOptions, DatePlan, Account, ArtKind, ArtOption, FullItem, MatchResult, WebImage, Collection, HomeUser, IndexedPlaylist, Item, ItemDetails, Library, LibraryPageResult, Playlist, SearchHub } from './types';
+import type { LibraryCompletion, RecentLibrary, StatsData, WatchedItem, AutoDateRule, DateOptions, DatePlan, Account, ArtKind, ArtOption, FullItem, MatchResult, WebImage, Collection, HomeUser, IndexedPlaylist, Item, ItemDetails, Library, LibraryPageResult, Playlist, SearchHub } from './types';
 
 export class ApiError extends Error {
   constructor(
@@ -105,6 +105,11 @@ export const api = {
   imageSearch: (q: string, page = 0) =>
     call<{ results: WebImage[]; cached: boolean }>('GET', `/api/image-search?q=${encodeURIComponent(q)}&page=${page}`),
 
+  recentContinue: (acct: string) => call<Item[]>('GET', `${a(acct)}/recent/continue`),
+  recentWatched: (acct: string, size = 60) => call<WatchedItem[]>('GET', `${a(acct)}/recent/watched?size=${size}`),
+  recentAdded: (acct: string, size = 16) => call<RecentLibrary[]>('GET', `${a(acct)}/recent/added?size=${size}`),
+  stats: (acct: string, refresh = false) => call<StatsData>('GET', `${a(acct)}/stats${refresh ? '?refresh=1' : ''}`),
+  libraryCompletion: (acct: string) => call<LibraryCompletion[]>('GET', `${a(acct)}/stats/libraries`),
   dateScan: (acct: string, sec: string, o: DateOptions) =>
     call<{ library: { key: string; title: string; type: string }; items: DatePlan[]; auto: AutoDateRule | null }>(
       'GET',

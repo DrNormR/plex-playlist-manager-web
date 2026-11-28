@@ -326,3 +326,61 @@ textarea { font: inherit; color: inherit; background: var(--panel-2); border: 1p
 .dates-table tbody tr { cursor: pointer; }
 .dates-table tbody tr:hover { background: var(--panel-2); }
 .new-val { color: var(--accent); font-weight: 600; }
+
+/* recent */
+.recent { overflow: auto; padding: 14px 18px 30px; display: block; }
+.recent-head { display: flex; align-items: center; gap: 12px; }
+.recent-head h2 { margin: 0; font-size: 18px; flex: 1; }
+.recent section { margin-top: 16px; }
+.recent h3 { margin: 0 0 8px; font-size: 15px; display: flex; align-items: center; gap: 10px; }
+.recent h3.recent-sub { margin-top: 26px; padding-top: 14px; border-top: 1px solid var(--line); }
+.recent h4 { margin: 0 0 6px; font-size: 14px; font-weight: 600; }
+.recent h4 button.link { color: var(--text); font-weight: 600; padding-left: 0; }
+.recent-lib { margin-top: 10px !important; }
+.strip { display: flex; gap: 12px; overflow-x: auto; padding-bottom: 6px; scrollbar-width: thin; }
+.strip-empty { padding: 6px 0 4px; }
+.strip-card { flex: 0 0 auto; width: 114px; background: none; border: 1px solid transparent; border-radius: 8px; padding: 2px; text-align: left; color: inherit; cursor: pointer; }
+.strip-card.sq { width: 134px; }
+.strip-card:hover { background: var(--panel-2); }
+.strip-card.focused { border-color: var(--accent); background: var(--sel); }
+.strip-poster { position: relative; border-radius: 6px; overflow: hidden; line-height: 0; }
+.strip-title { margin-top: 5px; font-size: 13px; font-weight: 500; }
+.progress { position: absolute; left: 0; right: 0; bottom: 0; height: 4px; background: #000a; }
+.progress div { height: 100%; background: var(--accent); }
+
+/* stats */
+.stats { overflow: auto; padding: 12px 18px 30px; display: block; }
+.stats-filters { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 14px; }
+.stats-body.dim { opacity: 0.6; }
+.tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; margin-bottom: 14px; }
+.tile { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; }
+.tile .big { font-size: 22px; font-weight: 650; }
+.stats .card { margin-bottom: 14px; padding: 14px 16px; }
+.stats .card h3 { margin: 0 0 8px; font-size: 14px; }
+.card-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 8px; }
+.card-head h3 { margin: 0 !important; flex: 1; }
+.stats-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 14px; }
+.stats-grid .card { margin-bottom: 0; }
+.readout { min-height: 18px; margin-bottom: 4px; }
+.cols { display: flex; align-items: flex-end; gap: 2px; border-bottom: 1px solid var(--line); }
+.col { flex: 1; height: 100%; display: flex; align-items: flex-end; min-width: 0; outline: none; cursor: default; }
+.col .bar { width: 100%; background: var(--accent); border-radius: 4px 4px 0 0; min-height: 0; }
+.col.on .bar, .col:focus .bar { background: #f3c24e; }
+.col.on, .col:focus { background: #ffffff08; }
+.col-labels { display: flex; gap: 2px; font-size: 11px; margin-top: 3px; }
+.col-labels div { flex: 1; min-width: 0; overflow: visible; white-space: nowrap; }
+.hbars { display: flex; flex-direction: column; gap: 6px; }
+.hbar { display: grid; grid-template-columns: minmax(80px, 34%) 1fr auto; gap: 8px; align-items: center; font-size: 13px; }
+.hbar .track { height: 10px; }
+.hbar .bar { height: 100%; background: var(--accent); border-radius: 0 4px 4px 0; }
+.hbar .num { font-variant-numeric: tabular-nums; min-width: 48px; text-align: right; }
+.top-table { width: 100%; border-collapse: collapse; }
+.top-table th { text-align: left; font-size: 12px; font-weight: 600; color: var(--muted); padding: 4px 6px; }
+.top-table td { padding: 5px 6px; border-top: 1px solid var(--line); vertical-align: middle; }
+.top-table td.grow { width: 100%; max-width: 0; }
+.top-table .num { text-align: right; font-variant-numeric: tabular-nums; }
+.top-table tbody tr { cursor: pointer; }
+.top-table tbody tr:hover { background: var(--panel-2); }
+.top-table tbody tr.focused { background: var(--sel); }
+.top-bar { height: 3px; margin-top: 4px; }
+.top-bar div { height: 100%; background: var(--accent); border-radius: 0 4px 4px 0; opacity: 0.8; }

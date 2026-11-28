@@ -7,13 +7,17 @@ import { PlaylistsPage } from './pages/PlaylistsPage';
 import { CollectionsPage } from './pages/CollectionsPage';
 import { SearchPage } from './pages/SearchPage';
 import { AccountsPage } from './pages/AccountsPage';
+import { RecentPage } from './pages/RecentPage';
+import { StatsPage } from './pages/StatsPage';
 
-type Tab = 'library' | 'playlists' | 'collections' | 'search' | 'accounts';
+type Tab = 'recent' | 'library' | 'playlists' | 'collections' | 'search' | 'stats' | 'accounts';
 const TABS: { id: Tab; label: string }[] = [
+  { id: 'recent', label: 'Recent' },
   { id: 'library', label: 'Library' },
   { id: 'playlists', label: 'Playlists' },
   { id: 'collections', label: 'Collections' },
   { id: 'search', label: 'Search' },
+  { id: 'stats', label: 'Stats' },
   { id: 'accounts', label: 'Accounts' },
 ];
 
@@ -167,6 +171,8 @@ export function App() {
           {shownTab === 'playlists' && acct && <PlaylistsPage key={acct.id} />}
           {shownTab === 'collections' && acct && <CollectionsPage key={acct.id} />}
           {shownTab === 'search' && acct && <SearchPage key={acct.id} />}
+          {shownTab === 'recent' && acct && <RecentPage key={acct.id} />}
+          {shownTab === 'stats' && acct && <StatsPage key={acct.id} />}
           {shownTab === 'accounts' && <AccountsPage onSelect={selectAccount} />}
         </div>
 

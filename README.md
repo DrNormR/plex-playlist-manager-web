@@ -11,6 +11,20 @@ fighting the Plex UI. It replaces the old WinForms
 - Add your **Plex Home** users (family profiles) from the admin account. A PIN is asked once if the profile has one, and it isn't stored.
 - Switch accounts from the top bar. Each account sees and edits its own playlists.
 
+**Recent** (for the profile selected in the top bar)
+- **In progress** with a progress bar and time left, and **Up next** episodes.
+- **Recently watched**: that profile's latest plays from Plex's history, filterable by library.
+- **Recently added** for every library. New episodes are grouped by season ("Season 2 · 4 new episodes"), and libraries can be collapsed.
+- Click any title to open the side panel (playlists, edit, artwork, watched).
+
+**Stats** (from Plex's play history, all profiles)
+- Filter by period (7 days to all time), profile, and library. Show plays or hours.
+- Totals: plays, watch time, different titles, days with plays, time per active day, longest daily streak, busiest day.
+- Plays/hours over time (by day, week or month), by day of week, and by time of day.
+- **Most watched** titles by plays or by time, for movies, shows (episodes add up to their show) or everything. Click one to open it.
+- Plays by library, profile and device, and how much of each library the selected profile has watched.
+- Watch time counts each play as the title's full length. Title lengths are looked up once and cached in `data/durations.json`. Plays of titles that have since been deleted use the library's average length.
+
 **Library**
 - Browse any library as a list or a poster grid, 100 titles at a time as you scroll.
 - Filter by title, genre, year range, or unwatched, or jump to a starting letter. Sort by title, year, date added, release date, rating, or last watched.

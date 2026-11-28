@@ -33,6 +33,42 @@ export interface Item {
   librarySectionID?: string;
   grandparentKey?: string;
   parentKey?: string;
+  /** Milliseconds into the item, when partly watched. */
+  viewOffset?: number;
+  lastViewedAt?: number;
+}
+
+export interface WatchedItem extends Item {
+  viewedAt: number;
+  deleted?: boolean;
+}
+
+export interface RecentLibrary {
+  key: string;
+  title: string;
+  type: string;
+  items: Item[];
+  error?: string;
+}
+
+export interface StatsData {
+  generatedAt: number;
+  accounts: { id: number; name: string }[];
+  libraries: { key: string; title: string; type: string }[];
+  devices: { id: number; name: string }[];
+  titles: { key: string; title: string; type: string; thumb?: string; lib: number }[];
+  /** [viewedAt, title idx, account idx, minutes, library idx, device idx, estimated] */
+  plays: [number, number, number, number, number, number, number][];
+  unknownDuration: number;
+}
+
+export interface LibraryCompletion {
+  key: string;
+  title: string;
+  type: string;
+  unit: string;
+  total: number;
+  watched: number;
 }
 
 export interface Playlist {
