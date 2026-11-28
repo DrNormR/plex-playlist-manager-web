@@ -275,6 +275,8 @@ export interface Item {
   grandparentKey?: string;
   /** Season (episodes), show (seasons), album (tracks) or artist (albums). */
   parentKey?: string;
+  viewOffset?: number;
+  lastViewedAt?: number;
 }
 
 const pad = (n: unknown) => String(n ?? '?').padStart(2, '0');
@@ -312,6 +314,8 @@ export function normItem(m: any): Item {
     librarySectionID: m.librarySectionID !== undefined ? String(m.librarySectionID) : undefined,
     grandparentKey: m.grandparentRatingKey ? String(m.grandparentRatingKey) : undefined,
     parentKey: m.parentRatingKey ? String(m.parentRatingKey) : undefined,
+    viewOffset: m.viewOffset,
+    lastViewedAt: m.lastViewedAt,
   };
 }
 

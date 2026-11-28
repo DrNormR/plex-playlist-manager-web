@@ -97,6 +97,28 @@ function Bars({ rows, metric }: { rows: { label: string; v: Agg }[]; metric: Met
   );
 }
 
+const VIEW_KEY = 'ppm.stats.view';
+interface SavedView {
+  period?: Period;
+  metric?: Metric;
+  kind?: Kind;
+  topBy?: Metric;
+  /** Server account ID, or 'all'. */
+  who?: number | 'all';
+  /** Library key, or '' for all. */
+  lib?: string;
+}
+function loadView(): SavedView {
+  try {
+    const v = JSON.parse(localStorage.getItem(VIEW_KEY) ?? 'null');
+    if (v && typeof v === 'object') return v;
+  } catch {
+    /* ignore */
+  }
+  const period = localStorage.getItem('ppm.stats.period') as Period | null; // older setting
+  return period ? { period } : {};
+}
+
 export function StatsPage() {
   const { acct } = useApp();
   const acctId = acct!.id;
@@ -104,12 +126,14 @@ export function StatsPage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [completion, setCompletion] = useState<LibraryCompletion[] | null>(null);
-  const [period, setPeriod] = useState<Period>(() => (localStorage.getItem('ppm.stats.period') as Period) || '365');
+  const [saved] = useState<SavedView>(loadView);
+  const [period, setPeriod] = useState<Period>(saved.period ?? '365');
   const [who, setWho] = useState<string>(''); // '' = everyone, else account index
   const [lib, setLib] = useState<string>(''); // '' = all, else library index
-  const [metric, setMetric] = useState<Metric>('plays');
-  const [kind, setKind] = useState<Kind>('all');
-  const [topBy, setTopBy] = useState<Metric>('plays');
+  const [metric, setMetric] = useState<Metric>(saved.metric ?? 'plays');
+  const [kind, setKind] = useState<Kind>(saved.kind ?? 'all');
+  const [topBy, setTopBy] = useState<Metric>(saved.topBy ?? 'plays');
+  const [restored, setRestored] = useState(false);
   const [focus, setFocus] = useState<Item | null>(null);
 
   const load = async (refresh = false) => {
@@ -128,12 +152,35 @@ export function StatsPage() {
     api.libraryCompletion(acctId).then(setCompletion, () => setCompletion([]));
   }, [acctId]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Default the profile filter to the selected account, once the data names it.
+  // Once the data is in, restore the saved profile and library (saved by ID, since the lists can
+  // change order). With nothing saved, start with the selected account.
   useEffect(() => {
-    if (!data) return;
-    const i = data.accounts.findIndex((a) => a.name.toLowerCase() === acct!.name.toLowerCase());
-    setWho(i >= 0 ? String(i) : '');
-  }, [data, acct]);
+    if (!data || restored) return;
+    if (saved.who === 'all') setWho('');
+    else {
+      const i = saved.who !== undefined
+        ? data.accounts.findIndex((a) => a.id === saved.who)
+        : data.accounts.findIndex((a) => a.name.toLowerCase() === acct!.name.toLowerCase());
+      setWho(i >= 0 ? String(i) : '');
+    }
+    const li = saved.lib ? data.libraries.findIndex((l) => l.key === saved.lib) : -1;
+    setLib(li >= 0 ? String(li) : '');
+    setRestored(true);
+  }, [data, acct, saved, restored]);
+
+  // Remember the view for next time.
+  useEffect(() => {
+    if (!data || !restored) return;
+    const v: SavedView = {
+      period,
+      metric,
+      kind,
+      topBy,
+      who: who === '' ? 'all' : data.accounts[Number(who)]?.id,
+      lib: lib === '' ? '' : data.libraries[Number(lib)]?.key,
+    };
+    localStorage.setItem(VIEW_KEY, JSON.stringify(v));
+  }, [data, restored, period, metric, kind, topBy, who, lib]);
 
   const s = useMemo(() => {
     if (!data) return null;
@@ -262,10 +309,7 @@ export function StatsPage() {
   }, [s, topBy]);
   const topMax = Math.max(1, ...topRows.map((r) => (topBy === 'plays' ? r.plays : r.min)));
 
-  const changePeriod = (p: Period) => {
-    setPeriod(p);
-    localStorage.setItem('ppm.stats.period', p);
-  };
+  const changePeriod = setPeriod;
 
   return (
     <div className="split">

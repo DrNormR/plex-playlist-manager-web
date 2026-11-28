@@ -53,11 +53,15 @@ export function TitlePanel({ item, onItemChanged, onAddedToPlaylist, onReplaced 
   const isWatched = isGroupType(item.type)
     ? !!shown.leafCount && (shown.viewedLeafCount ?? 0) >= shown.leafCount
     : !!shown.viewCount;
+  // Partly watched: in progress, or some episodes of a show/season watched. Offer both then.
+  const partly = !!shown.viewOffset || (isGroupType(item.type) && (shown.viewedLeafCount ?? 0) > 0 && !isWatched);
+  const showMarkWatched = !isWatched || partly;
+  const showMarkUnwatched = isWatched || partly;
   const canWatch = ['movie', 'episode', 'show', 'season', 'track', 'album', 'artist'].includes(item.type);
-  const toggleWatched = async () => {
-    const ok = await busy(isWatched ? 'Marking unwatched…' : 'Marking watched…', () => api.setWatched(acct!.id, [item.ratingKey], !isWatched));
+  const setWatched = async (watched: boolean) => {
+    const ok = await busy(watched ? 'Marking watched…' : 'Marking unwatched…', () => api.setWatched(acct!.id, [item.ratingKey], watched));
     if (!ok) return;
-    notify(`${shown.displayTitle}: marked ${isWatched ? 'unwatched' : 'watched'} for ${acct!.name}`, 'ok');
+    notify(`${shown.displayTitle}: marked ${watched ? 'watched' : 'unwatched'} for ${acct!.name}`, 'ok');
     const d = await loadDetails();
     if (d) onItemChanged?.(d);
   };
@@ -82,10 +86,11 @@ export function TitlePanel({ item, onItemChanged, onAddedToPlaylist, onReplaced 
               {canEditMeta && ['movie', 'show', 'artist', 'album'].includes(item.type) && (
                 <button className="small-btn" onClick={() => setEditTab('match')}>Match…</button>
               )}
-              {canWatch && (
-                <button className="small-btn" onClick={toggleWatched} title={`For ${acct!.name}`}>
-                  {isWatched ? 'Mark unwatched' : 'Mark watched'}
-                </button>
+              {canWatch && showMarkWatched && (
+                <button className="small-btn" onClick={() => setWatched(true)} title={`For ${acct!.name}`}>Mark watched</button>
+              )}
+              {canWatch && showMarkUnwatched && (
+                <button className="small-btn" onClick={() => setWatched(false)} title={`For ${acct!.name}${shown.viewOffset ? ' (also clears the resume point)' : ''}`}>Mark unwatched</button>
               )}
               <button className="small-btn" onClick={() => setEditTab('info')}>Info</button>
               <button className="small-btn" onClick={() => setArtOpen(true)}>Artwork…</button>
